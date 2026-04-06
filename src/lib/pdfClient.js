@@ -22,7 +22,7 @@ function canFallback(status) {
   return status === 408 || status === 429 || status >= 500
 }
 
-export async function generatePdf({ endpointMode, payload }) {
+export async function generatePdf({ endpointMode, apiPath, payload, formData }) {
   const candidates = getEndpointCandidates(endpointMode)
   let lastError = new Error('PDF generation failed.')
 
@@ -31,12 +31,15 @@ export async function generatePdf({ endpointMode, payload }) {
     const shouldAllowFallback = endpointMode === 'auto' && index < candidates.length - 1
 
     try {
-      const response = await fetch(`${baseUrl}/api/v1/pdf`, {
+      const isMultipart = formData instanceof FormData
+      const response = await fetch(`${baseUrl}/api/v1/${apiPath}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        ...(isMultipart
+          ? { body: formData }
+          : {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }),
       })
 
       if (!response.ok) {

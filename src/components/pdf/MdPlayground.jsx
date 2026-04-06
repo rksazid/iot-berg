@@ -1,17 +1,18 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { marked } from 'marked'
 import { endpointOptions } from '../../config/pdfService'
 import { generatePdf } from '../../lib/pdfClient'
+import { starterMarkdown } from '../../data/mdExamples'
 import {
   footerTemplateExample,
   headerTemplateExample,
-  starterTemplate,
 } from '../../data/pdfExamples'
 
 const formats = ['A4', 'Letter', 'A3', 'Legal', 'Tabloid']
 
 const initialState = {
   endpointMode: 'auto',
-  html: starterTemplate,
+  markdown: starterMarkdown,
   format: 'A4',
   landscape: false,
   marginTop: '1cm',
@@ -24,13 +25,11 @@ const initialState = {
   headerTemplate: headerTemplateExample,
   footerTemplate: footerTemplateExample,
   preferCSSPageSize: false,
-  waitForSelector: '',
-  waitForTimeout: '',
 }
 
 function toPayload(state) {
   const payload = {
-    html: state.html,
+    markdown: state.markdown,
     format: state.format,
     landscape: state.landscape,
     margin: {
@@ -50,14 +49,6 @@ function toPayload(state) {
     payload.footerTemplate = state.footerTemplate
   }
 
-  if (state.waitForSelector.trim()) {
-    payload.waitForSelector = state.waitForSelector.trim()
-  }
-
-  if (state.waitForTimeout !== '') {
-    payload.waitForTimeout = Number(state.waitForTimeout)
-  }
-
   return payload
 }
 
@@ -66,7 +57,7 @@ function startDownload(blob) {
   const link = document.createElement('a')
 
   link.href = downloadUrl
-  link.download = 'iot-berg-document.pdf'
+  link.download = 'iot-berg-markdown.pdf'
 
   document.body.appendChild(link)
   link.click()
@@ -77,9 +68,9 @@ function startDownload(blob) {
   }, 1000)
 }
 
-export function PdfPlayground() {
+export function MdPlayground() {
   const [formState, setFormState] = useState(initialState)
-  const [showPreview, setShowPreview] = useState(false)
+  const [showPreview, setShowPreview] = useState(true)
   const [status, setStatus] = useState({
     loading: false,
     error: '',
@@ -87,6 +78,8 @@ export function PdfPlayground() {
     generationTime: '',
     usedEndpoint: '',
   })
+
+  const renderedHtml = useMemo(() => marked.parse(formState.markdown), [formState.markdown])
 
   function updateField(field, value) {
     setFormState((current) => ({
@@ -109,7 +102,7 @@ export function PdfPlayground() {
     try {
       const result = await generatePdf({
         endpointMode: formState.endpointMode,
-        apiPath: 'html-to-pdf',
+        apiPath: 'md-to-pdf',
         payload: toPayload(formState),
       })
 
@@ -153,9 +146,9 @@ export function PdfPlayground() {
         <div className="form-section form-section-hero">
           <div className="section-head">
             <p className="section-label">Interactive service</p>
-            <h2>Generate PDF</h2>
+            <h2>Generate PDF from Markdown</h2>
             <p>
-              Paste HTML, configure the rendering options, and download the resulting PDF from the live service.
+              Write or paste Markdown, preview the rendered output, and download the resulting PDF from the live service.
             </p>
           </div>
 
@@ -170,7 +163,7 @@ export function PdfPlayground() {
         <div className="form-section">
           <div className="section-head">
             <h2>Input</h2>
-            <p>The HTML body can contain full document markup, inline styles, and approved external assets.</p>
+            <p>Write GitHub Flavored Markdown with headings, lists, tables, code blocks, and more.</p>
           </div>
 
           <div className="form-grid">
@@ -190,7 +183,7 @@ export function PdfPlayground() {
 
             <div className="field field-wide">
               <div className="field-header">
-                <span>HTML Input</span>
+                <span>Markdown Input</span>
                 <button
                   type="button"
                   className="preview-toggle"
@@ -201,18 +194,16 @@ export function PdfPlayground() {
               </div>
               <div className={`input-split${showPreview ? '' : ' preview-hidden'}`}>
                 <textarea
-                  rows="18"
+                  rows="20"
                   className="field-textarea"
-                  value={formState.html}
-                  onChange={(event) => updateField('html', event.target.value)}
-                  placeholder="Paste full HTML here"
+                  value={formState.markdown}
+                  onChange={(event) => updateField('markdown', event.target.value)}
+                  placeholder="Write Markdown here..."
                 />
                 {showPreview && (
-                  <iframe
-                    className="html-preview-frame"
-                    title="HTML Preview"
-                    srcDoc={formState.html}
-                    sandbox=""
+                  <div
+                    className="md-preview-panel"
+                    dangerouslySetInnerHTML={{ __html: renderedHtml }}
                   />
                 )}
               </div>
@@ -322,29 +313,6 @@ export function PdfPlayground() {
                 type="text"
                 value={formState.marginLeft}
                 onChange={(event) => updateField('marginLeft', event.target.value)}
-              />
-            </label>
-
-            <label className="field">
-              <span>Wait For Selector</span>
-              <input
-                type="text"
-                value={formState.waitForSelector}
-                onChange={(event) => updateField('waitForSelector', event.target.value)}
-                placeholder=".chart-ready"
-              />
-            </label>
-
-            <label className="field">
-              <span>Wait For Timeout (ms)</span>
-              <input
-                type="number"
-                min="0"
-                max="5000"
-                step="100"
-                value={formState.waitForTimeout}
-                onChange={(event) => updateField('waitForTimeout', event.target.value)}
-                placeholder="2000"
               />
             </label>
 

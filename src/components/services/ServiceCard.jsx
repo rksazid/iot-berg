@@ -4,9 +4,21 @@ export function ServiceCard({ service }) {
   return (
     <article className="service-card glass-panel">
       <div className="service-card-top">
-        <span className="service-pill">Active service</span>
+        <div className="service-card-head">
+          <span className="service-pill">{service.status}</span>
+          <span className="service-category">{service.category}</span>
+        </div>
         <h2>{service.name}</h2>
         <p>{service.summary}</p>
+      </div>
+
+      <div className="service-metric-strip">
+        {service.metrics.map((metric) => (
+          <div className="service-metric" key={metric.label}>
+            <strong>{metric.value}</strong>
+            <span>{metric.label}</span>
+          </div>
+        ))}
       </div>
 
       <div className="service-meta">

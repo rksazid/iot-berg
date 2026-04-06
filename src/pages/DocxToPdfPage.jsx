@@ -1,9 +1,9 @@
 import { serviceCatalog } from '../data/services'
 import { PageIntro } from '../components/ui/PageIntro'
-import { PdfPlayground } from '../components/pdf/PdfPlayground'
+import { DocxPlayground } from '../components/pdf/DocxPlayground'
 
-export function HtmlToPdfPage() {
-  const service = serviceCatalog.find((s) => s.slug === 'html-to-pdf')
+export function DocxToPdfPage() {
+  const service = serviceCatalog.find((s) => s.slug === 'docx-to-pdf')
 
   return (
     <div className="page page-service-detail">
@@ -51,7 +51,7 @@ export function HtmlToPdfPage() {
           </div>
         </aside>
 
-        <PdfPlayground />
+        <DocxPlayground />
       </section>
     </div>
   )
