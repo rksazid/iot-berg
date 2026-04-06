@@ -1,36 +1,19 @@
-import { Link } from 'react-router-dom'
 import { serviceCatalog } from '../data/services'
+import { PageIntro } from '../components/ui/PageIntro'
+import { ServiceCard } from '../components/services/ServiceCard'
 
 export function ServicesPage() {
   return (
     <div className="page page-services">
-      <section className="page-header">
-        <p className="eyebrow">Service catalog</p>
-        <h1>Products from IoT-Berg, built to grow over time.</h1>
-        <p className="page-intro">
-          The catalog starts with document generation and is structured for future software services. Each service gets its own detail page and workflow entry point.
-        </p>
-      </section>
+      <PageIntro
+        eyebrow="Service catalog"
+        title="Products from IoT-Berg, structured to scale into a broader platform."
+        description="Each service is represented as a structured catalog entry with its own detail page, capabilities, and action flow."
+      />
 
       <section className="service-grid">
         {serviceCatalog.map((service) => (
-          <article className="service-card" key={service.slug}>
-            <div className="service-card-top">
-              <span className="service-pill">Active service</span>
-              <h2>{service.name}</h2>
-              <p>{service.summary}</p>
-            </div>
-            <div className="service-meta">
-              {service.highlights.map((item) => (
-                <span className="service-tag" key={item}>
-                  {item}
-                </span>
-              ))}
-            </div>
-            <Link className="button button-primary button-full" to={`/services/${service.slug}`}>
-              Open Service
-            </Link>
-          </article>
+          <ServiceCard key={service.slug} service={service} />
         ))}
       </section>
     </div>
