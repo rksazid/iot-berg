@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { endpointOptions } from '../../config/pdfService'
 import { generatePdf } from '../../lib/pdfClient'
+import { ResizableSplit } from '../ui/ResizableSplit'
 import {
   footerTemplateExample,
   headerTemplateExample,
@@ -61,12 +63,18 @@ function toPayload(state) {
   return payload
 }
 
-function startDownload(blob) {
+function getDefaultFilename() {
+  const now = new Date()
+  const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  return `iot-berg-html-${stamp}.pdf`
+}
+
+function startDownload(blob, filename) {
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
 
   link.href = downloadUrl
-  link.download = 'iot-berg-document.pdf'
+  link.download = filename || getDefaultFilename()
 
   document.body.appendChild(link)
   link.click()
@@ -79,7 +87,9 @@ function startDownload(blob) {
 
 export function PdfPlayground() {
   const [formState, setFormState] = useState(initialState)
+  const [outputFilename, setOutputFilename] = useState('')
   const [showPreview, setShowPreview] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const [status, setStatus] = useState({
     loading: false,
     error: '',
@@ -87,6 +97,23 @@ export function PdfPlayground() {
     generationTime: '',
     usedEndpoint: '',
   })
+
+  const closeFullscreen = useCallback((e) => {
+    if (e.key === 'Escape') setFullscreen(false)
+  }, [])
+
+  useEffect(() => {
+    if (fullscreen) {
+      document.addEventListener('keydown', closeFullscreen)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.removeEventListener('keydown', closeFullscreen)
+      document.body.style.overflow = ''
+    }
+  }, [fullscreen, closeFullscreen])
 
   function updateField(field, value) {
     setFormState((current) => ({
@@ -113,7 +140,10 @@ export function PdfPlayground() {
         payload: toPayload(formState),
       })
 
-      startDownload(result.blob)
+      const name = outputFilename.trim()
+        ? (outputFilename.trim().endsWith('.pdf') ? outputFilename.trim() : `${outputFilename.trim()}.pdf`)
+        : getDefaultFilename()
+      startDownload(result.blob, name)
 
       setStatus({
         loading: false,
@@ -138,6 +168,7 @@ export function PdfPlayground() {
 
   function handleReset() {
     setFormState(initialState)
+    setOutputFilename('')
     setStatus({
       loading: false,
       error: '',
@@ -191,13 +222,24 @@ export function PdfPlayground() {
             <div className="field field-wide">
               <div className="field-header">
                 <span>HTML Input</span>
-                <button
-                  type="button"
-                  className="preview-toggle"
-                  onClick={() => setShowPreview((v) => !v)}
-                >
-                  {showPreview ? 'Hide Preview' : 'Show Preview'}
-                </button>
+                <div className="field-header-actions">
+                  <button
+                    type="button"
+                    className="preview-toggle"
+                    onClick={() => setShowPreview((v) => !v)}
+                  >
+                    {showPreview ? 'Hide Preview' : 'Show Preview'}
+                  </button>
+                  {showPreview && (
+                    <button
+                      type="button"
+                      className="preview-toggle"
+                      onClick={() => setFullscreen(true)}
+                    >
+                      Fullscreen
+                    </button>
+                  )}
+                </div>
               </div>
               <div className={`input-split${showPreview ? '' : ' preview-hidden'}`}>
                 <textarea
@@ -217,6 +259,36 @@ export function PdfPlayground() {
                 )}
               </div>
             </div>
+
+            {fullscreen && showPreview && createPortal(
+              <div className="fullscreen-overlay">
+                <div className="fullscreen-header">
+                  <span>HTML Editor + Preview</span>
+                  <button type="button" className="preview-toggle" onClick={() => setFullscreen(false)}>
+                    Exit Fullscreen (Esc)
+                  </button>
+                </div>
+                <ResizableSplit
+                  left={
+                    <textarea
+                      className="field-textarea"
+                      value={formState.html}
+                      onChange={(event) => updateField('html', event.target.value)}
+                      placeholder="Paste full HTML here"
+                    />
+                  }
+                  right={
+                    <iframe
+                      className="html-preview-frame"
+                      title="HTML Preview"
+                      srcDoc={formState.html}
+                      sandbox=""
+                    />
+                  }
+                />
+              </div>,
+              document.body,
+            )}
           </div>
         </div>
 
@@ -381,6 +453,20 @@ export function PdfPlayground() {
           {status.generationTime ? (
             <p className="status-message">Generation time: {status.generationTime} ms</p>
           ) : null}
+        </div>
+
+        <div className="form-section">
+          <div className="form-grid">
+            <label className="field field-wide">
+              <span>Output Filename</span>
+              <input
+                type="text"
+                value={outputFilename}
+                onChange={(event) => setOutputFilename(event.target.value)}
+                placeholder={getDefaultFilename()}
+              />
+            </label>
+          </div>
         </div>
 
         <div className="form-actions">

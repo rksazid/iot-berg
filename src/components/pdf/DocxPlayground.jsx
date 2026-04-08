@@ -33,12 +33,18 @@ function validateFile(file) {
   return null
 }
 
-function startDownload(blob) {
+function getDefaultFilename() {
+  const now = new Date()
+  const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  return `iot-berg-docx-${stamp}.pdf`
+}
+
+function startDownload(blob, filename) {
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
 
   link.href = downloadUrl
-  link.download = 'iot-berg-converted.pdf'
+  link.download = filename || getDefaultFilename()
 
   document.body.appendChild(link)
   link.click()
@@ -51,6 +57,7 @@ function startDownload(blob) {
 
 export function DocxPlayground() {
   const [formState, setFormState] = useState(initialState)
+  const [outputFilename, setOutputFilename] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [status, setStatus] = useState({
     loading: false,
@@ -134,7 +141,10 @@ export function DocxPlayground() {
         formData: fd,
       })
 
-      startDownload(result.blob)
+      const name = outputFilename.trim()
+        ? (outputFilename.trim().endsWith('.pdf') ? outputFilename.trim() : `${outputFilename.trim()}.pdf`)
+        : getDefaultFilename()
+      startDownload(result.blob, name)
 
       setStatus({
         loading: false,
@@ -159,6 +169,7 @@ export function DocxPlayground() {
 
   function handleReset() {
     setFormState(initialState)
+    setOutputFilename('')
     setStatus({
       loading: false,
       error: '',
@@ -285,6 +296,20 @@ export function DocxPlayground() {
           {status.generationTime ? (
             <p className="status-message">Generation time: {status.generationTime} ms</p>
           ) : null}
+        </div>
+
+        <div className="form-section">
+          <div className="form-grid">
+            <label className="field field-wide">
+              <span>Output Filename</span>
+              <input
+                type="text"
+                value={outputFilename}
+                onChange={(event) => setOutputFilename(event.target.value)}
+                placeholder={getDefaultFilename()}
+              />
+            </label>
+          </div>
         </div>
 
         <div className="form-actions">

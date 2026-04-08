@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { marked } from 'marked'
 import { endpointOptions } from '../../config/pdfService'
 import { generatePdf } from '../../lib/pdfClient'
+import { ResizableSplit } from '../ui/ResizableSplit'
 import { starterMarkdown } from '../../data/mdExamples'
 import {
   footerTemplateExample,
@@ -52,12 +54,18 @@ function toPayload(state) {
   return payload
 }
 
-function startDownload(blob) {
+function getDefaultFilename() {
+  const now = new Date()
+  const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  return `iot-berg-markdown-${stamp}.pdf`
+}
+
+function startDownload(blob, filename) {
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
 
   link.href = downloadUrl
-  link.download = 'iot-berg-markdown.pdf'
+  link.download = filename || getDefaultFilename()
 
   document.body.appendChild(link)
   link.click()
@@ -70,7 +78,9 @@ function startDownload(blob) {
 
 export function MdPlayground() {
   const [formState, setFormState] = useState(initialState)
+  const [outputFilename, setOutputFilename] = useState('')
   const [showPreview, setShowPreview] = useState(true)
+  const [fullscreen, setFullscreen] = useState(false)
   const [status, setStatus] = useState({
     loading: false,
     error: '',
@@ -80,6 +90,23 @@ export function MdPlayground() {
   })
 
   const renderedHtml = useMemo(() => marked.parse(formState.markdown), [formState.markdown])
+
+  const closeFullscreen = useCallback((e) => {
+    if (e.key === 'Escape') setFullscreen(false)
+  }, [])
+
+  useEffect(() => {
+    if (fullscreen) {
+      document.addEventListener('keydown', closeFullscreen)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.removeEventListener('keydown', closeFullscreen)
+      document.body.style.overflow = ''
+    }
+  }, [fullscreen, closeFullscreen])
 
   function updateField(field, value) {
     setFormState((current) => ({
@@ -106,7 +133,10 @@ export function MdPlayground() {
         payload: toPayload(formState),
       })
 
-      startDownload(result.blob)
+      const name = outputFilename.trim()
+        ? (outputFilename.trim().endsWith('.pdf') ? outputFilename.trim() : `${outputFilename.trim()}.pdf`)
+        : getDefaultFilename()
+      startDownload(result.blob, name)
 
       setStatus({
         loading: false,
@@ -131,6 +161,7 @@ export function MdPlayground() {
 
   function handleReset() {
     setFormState(initialState)
+    setOutputFilename('')
     setStatus({
       loading: false,
       error: '',
@@ -184,13 +215,24 @@ export function MdPlayground() {
             <div className="field field-wide">
               <div className="field-header">
                 <span>Markdown Input</span>
-                <button
-                  type="button"
-                  className="preview-toggle"
-                  onClick={() => setShowPreview((v) => !v)}
-                >
-                  {showPreview ? 'Hide Preview' : 'Show Preview'}
-                </button>
+                <div className="field-header-actions">
+                  <button
+                    type="button"
+                    className="preview-toggle"
+                    onClick={() => setShowPreview((v) => !v)}
+                  >
+                    {showPreview ? 'Hide Preview' : 'Show Preview'}
+                  </button>
+                  {showPreview && (
+                    <button
+                      type="button"
+                      className="preview-toggle"
+                      onClick={() => setFullscreen(true)}
+                    >
+                      Fullscreen
+                    </button>
+                  )}
+                </div>
               </div>
               <div className={`input-split${showPreview ? '' : ' preview-hidden'}`}>
                 <textarea
@@ -208,6 +250,34 @@ export function MdPlayground() {
                 )}
               </div>
             </div>
+
+            {fullscreen && showPreview && createPortal(
+              <div className="fullscreen-overlay">
+                <div className="fullscreen-header">
+                  <span>Markdown Editor + Preview</span>
+                  <button type="button" className="preview-toggle" onClick={() => setFullscreen(false)}>
+                    Exit Fullscreen (Esc)
+                  </button>
+                </div>
+                <ResizableSplit
+                  left={
+                    <textarea
+                      className="field-textarea"
+                      value={formState.markdown}
+                      onChange={(event) => updateField('markdown', event.target.value)}
+                      placeholder="Write Markdown here..."
+                    />
+                  }
+                  right={
+                    <div
+                      className="md-preview-panel"
+                      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                    />
+                  }
+                />
+              </div>,
+              document.body,
+            )}
           </div>
         </div>
 
@@ -349,6 +419,20 @@ export function MdPlayground() {
           {status.generationTime ? (
             <p className="status-message">Generation time: {status.generationTime} ms</p>
           ) : null}
+        </div>
+
+        <div className="form-section">
+          <div className="form-grid">
+            <label className="field field-wide">
+              <span>Output Filename</span>
+              <input
+                type="text"
+                value={outputFilename}
+                onChange={(event) => setOutputFilename(event.target.value)}
+                placeholder={getDefaultFilename()}
+              />
+            </label>
+          </div>
         </div>
 
         <div className="form-actions">
