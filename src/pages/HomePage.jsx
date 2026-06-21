@@ -62,10 +62,10 @@ export function HomePage() {
             <span className="meta-chip">Client-ready delivery</span>
           </div>
           <div className="hero-actions">
-            <Link className="button button-primary" to="/services">
-              Explore Services
+            <Link className="button button-primary" to="/convert">
+              Open Converter
             </Link>
-            <Link className="button button-secondary" to="/services/html-to-pdf">
+            <Link className="button button-secondary" to="/convert/html">
               Try HTML to PDF
             </Link>
           </div>
@@ -143,11 +143,11 @@ export function HomePage() {
             </p>
           </div>
           <div className="feature-actions">
-            <Link className="button button-primary" to="/services/html-to-pdf">
-              Open Playground
+            <Link className="button button-primary" to="/convert/html">
+              Open Converter
             </Link>
-            <Link className="button button-secondary" to="/services">
-              View Service Catalog
+            <Link className="button button-secondary" to="/convert">
+              View All Formats
             </Link>
           </div>
         </div>
@@ -180,10 +180,10 @@ export function HomePage() {
           </p>
         </div>
         <div className="cta-actions">
-          <Link className="button button-primary" to="/services">
-            Explore Services
+          <Link className="button button-primary" to="/convert">
+            Open Converter
           </Link>
-          <Link className="button button-secondary" to="/services/html-to-pdf">
+          <Link className="button button-secondary" to="/convert/html">
             Try HTML to PDF
           </Link>
         </div>

@@ -46,7 +46,12 @@ export async function generatePdf({ endpointMode, apiPath, payload, formData }) 
         let problemData = null
 
         try {
-          problemData = await response.json()
+          const raw = await response.text()
+          try {
+            problemData = JSON.parse(raw)
+          } catch {
+            problemData = raw
+          }
         } catch {}
 
         const message = getErrorMessage(

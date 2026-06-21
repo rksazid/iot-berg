@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 const navigationLinks = [
   { to: '/', label: 'Home' },
-  { to: '/services', label: 'Services' },
+  { to: '/convert', label: 'Convert' },
 ]
 
 export function SiteLayout() {
@@ -18,7 +18,6 @@ export function SiteLayout() {
     <div className="site-shell">
       <div className="ambient ambient-left" />
       <div className="ambient ambient-right" />
-      <div className="ambient ambient-center" />
 
       <header className="site-header-wrap">
         <div className="site-header glass-panel glass-panel-strong">
@@ -46,6 +45,7 @@ export function SiteLayout() {
               {navigationLinks.map((link) => (
                 <NavLink
                   key={link.to}
+                  end={link.to === '/'}
                   className={({ isActive }) =>
                     `nav-link${isActive ? ' nav-link-active' : ''}`
                   }
@@ -55,8 +55,8 @@ export function SiteLayout() {
                 </NavLink>
               ))}
             </nav>
-            <NavLink className="button button-secondary header-cta" to="/services">
-              Explore Services
+            <NavLink className="button button-primary header-cta" to="/convert">
+              Open Converter
             </NavLink>
           </div>
         </div>
@@ -75,10 +75,10 @@ export function SiteLayout() {
             </p>
           </div>
           <div className="footer-links">
-            <NavLink to="/services">Service Catalog</NavLink>
-            <NavLink to="/services/html-to-pdf">HTML to PDF</NavLink>
-            <NavLink to="/services/md-to-pdf">MD to PDF</NavLink>
-            <NavLink to="/services/docx-to-pdf">DOCX to PDF</NavLink>
+            <NavLink to="/convert">Converter</NavLink>
+            <NavLink to="/convert/html">HTML to PDF</NavLink>
+            <NavLink to="/convert/markdown">Markdown to PDF</NavLink>
+            <NavLink to="/convert/docx">DOCX to PDF</NavLink>
           </div>
         </div>
       </footer>

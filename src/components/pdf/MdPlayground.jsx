@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { marked } from 'marked'
 import { endpointOptions } from '../../config/pdfService'
 import { generatePdf } from '../../lib/pdfClient'
 import { ResizableSplit } from '../ui/ResizableSplit'
+import { CodeEditor } from '../ui/CodeEditor'
+import { EditorToolbar } from '../ui/EditorToolbar'
 import { starterMarkdown } from '../../data/mdExamples'
 import {
   footerTemplateExample,
@@ -63,17 +65,12 @@ function getDefaultFilename() {
 function startDownload(blob, filename) {
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
-
   link.href = downloadUrl
   link.download = filename || getDefaultFilename()
-
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-
-  window.setTimeout(() => {
-    window.URL.revokeObjectURL(downloadUrl)
-  }, 1000)
+  window.setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 1000)
 }
 
 export function MdPlayground() {
@@ -88,6 +85,9 @@ export function MdPlayground() {
     generationTime: '',
     usedEndpoint: '',
   })
+
+  const editorRef = useRef(null)
+  const fsEditorRef = useRef(null)
 
   const renderedHtml = useMemo(() => marked.parse(formState.markdown), [formState.markdown])
 
@@ -109,22 +109,12 @@ export function MdPlayground() {
   }, [fullscreen, closeFullscreen])
 
   function updateField(field, value) {
-    setFormState((current) => ({
-      ...current,
-      [field]: value,
-    }))
+    setFormState((current) => ({ ...current, [field]: value }))
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-
-    setStatus({
-      loading: true,
-      error: '',
-      success: '',
-      generationTime: '',
-      usedEndpoint: '',
-    })
+    setStatus({ loading: true, error: '', success: '', generationTime: '', usedEndpoint: '' })
 
     try {
       const result = await generatePdf({
@@ -148,10 +138,7 @@ export function MdPlayground() {
     } catch (error) {
       setStatus({
         loading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Something went wrong while generating the PDF.',
+        error: error instanceof Error ? error.message : 'Something went wrong while generating the PDF.',
         success: '',
         generationTime: '',
         usedEndpoint: '',
@@ -162,52 +149,44 @@ export function MdPlayground() {
   function handleReset() {
     setFormState(initialState)
     setOutputFilename('')
-    setStatus({
-      loading: false,
-      error: '',
-      success: '',
-      generationTime: '',
-      usedEndpoint: '',
-    })
+    setStatus({ loading: false, error: '', success: '', generationTime: '', usedEndpoint: '' })
   }
 
+  const editorPane = (ref, isFullscreen = false) => (
+    <div className="editor-pane">
+      <EditorToolbar editorRef={ref} language="markdown" />
+      <CodeEditor
+        ref={ref}
+        value={formState.markdown}
+        onChange={(v) => updateField('markdown', v)}
+        language="markdown"
+        height={isFullscreen ? 'calc(100vh - 52px)' : '420px'}
+      />
+    </div>
+  )
+
+  const previewPane = (
+    <div
+      className="md-preview-panel"
+      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+    />
+  )
+
   return (
-    <section className="playground-panel glass-panel glass-panel-strong">
+    <section className="playground-panel">
       <form className="pdf-form" onSubmit={handleSubmit}>
-        <div className="form-section form-section-hero">
-          <div className="section-head">
-            <p className="section-label">Interactive service</p>
-            <h2>Generate PDF from Markdown</h2>
-            <p>
-              Write or paste Markdown, preview the rendered output, and download the resulting PDF from the live service.
-            </p>
-          </div>
-
-          <div className="inline-banner">
-            <strong>Endpoint behavior</strong>
-            <p>
-              Auto select uses the primary deployment first and falls back to the secondary deployment when the request cannot complete.
-            </p>
-          </div>
-        </div>
-
         <div className="form-section">
           <div className="section-head">
-            <h2>Input</h2>
-            <p>Write GitHub Flavored Markdown with headings, lists, tables, code blocks, and more.</p>
+            <h2>Markdown Input</h2>
+            <p>GitHub Flavored Markdown — headings, lists, tables, code blocks, task lists, and more.</p>
           </div>
 
           <div className="form-grid">
             <label className="field field-wide">
               <span>Endpoint Mode</span>
-              <select
-                value={formState.endpointMode}
-                onChange={(event) => updateField('endpointMode', event.target.value)}
-              >
-                {endpointOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
+              <select value={formState.endpointMode} onChange={(e) => updateField('endpointMode', e.target.value)}>
+                {endpointOptions.map((o) => (
+                  <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
               </select>
             </label>
@@ -216,228 +195,146 @@ export function MdPlayground() {
               <div className="field-header">
                 <span>Markdown Input</span>
                 <div className="field-header-actions">
-                  <button
-                    type="button"
-                    className="preview-toggle"
-                    onClick={() => setShowPreview((v) => !v)}
-                  >
+                  <button type="button" className="preview-toggle" onClick={() => setShowPreview((v) => !v)}>
                     {showPreview ? 'Hide Preview' : 'Show Preview'}
                   </button>
                   {showPreview && (
-                    <button
-                      type="button"
-                      className="preview-toggle"
-                      onClick={() => setFullscreen(true)}
-                    >
+                    <button type="button" className="preview-toggle" onClick={() => setFullscreen(true)}>
                       Fullscreen
                     </button>
                   )}
                 </div>
               </div>
               <div className={`input-split${showPreview ? '' : ' preview-hidden'}`}>
-                <textarea
-                  rows="20"
-                  className="field-textarea"
-                  value={formState.markdown}
-                  onChange={(event) => updateField('markdown', event.target.value)}
-                  placeholder="Write Markdown here..."
-                />
-                {showPreview && (
-                  <div
-                    className="md-preview-panel"
-                    dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                  />
-                )}
+                {editorPane(editorRef, false)}
+                {showPreview && previewPane}
               </div>
             </div>
-
-            {fullscreen && showPreview && createPortal(
-              <div className="fullscreen-overlay">
-                <div className="fullscreen-header">
-                  <span>Markdown Editor + Preview</span>
-                  <button type="button" className="preview-toggle" onClick={() => setFullscreen(false)}>
-                    Exit Fullscreen (Esc)
-                  </button>
-                </div>
-                <ResizableSplit
-                  left={
-                    <textarea
-                      className="field-textarea"
-                      value={formState.markdown}
-                      onChange={(event) => updateField('markdown', event.target.value)}
-                      placeholder="Write Markdown here..."
-                    />
-                  }
-                  right={
-                    <div
-                      className="md-preview-panel"
-                      dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                    />
-                  }
-                />
-              </div>,
-              document.body,
-            )}
           </div>
         </div>
+
+        {fullscreen && showPreview && createPortal(
+          <div className="fullscreen-overlay">
+            <div className="fullscreen-header">
+              <span>Markdown Editor + Preview</span>
+              <button type="button" className="preview-toggle" onClick={() => setFullscreen(false)}>
+                Exit Fullscreen (Esc)
+              </button>
+            </div>
+            <ResizableSplit
+              left={editorPane(fsEditorRef, true)}
+              right={previewPane}
+            />
+          </div>,
+          document.body,
+        )}
 
         <div className="form-section">
           <div className="section-head">
             <h2>PDF Options</h2>
-            <p>These values map directly to the available options supported by the pdf-lagbe API.</p>
+            <p>These values map directly to the Puppeteer PDF options.</p>
           </div>
 
           <div className="form-grid">
             <label className="field">
               <span>Format</span>
-              <select
-                value={formState.format}
-                onChange={(event) => updateField('format', event.target.value)}
-              >
-                {formats.map((format) => (
-                  <option key={format} value={format}>
-                    {format}
-                  </option>
-                ))}
+              <select value={formState.format} onChange={(e) => updateField('format', e.target.value)}>
+                {formats.map((f) => <option key={f} value={f}>{f}</option>)}
               </select>
             </label>
 
             <label className="field">
               <span>Scale</span>
-              <input
-                type="number"
-                min="0.1"
-                max="2"
-                step="0.1"
-                value={formState.scale}
-                onChange={(event) => updateField('scale', event.target.value)}
-              />
+              <input type="number" min="0.1" max="2" step="0.1" value={formState.scale}
+                onChange={(e) => updateField('scale', e.target.value)} />
             </label>
 
             <label className="field checkbox-field">
-              <input
-                type="checkbox"
-                checked={formState.landscape}
-                onChange={(event) => updateField('landscape', event.target.checked)}
-              />
+              <input type="checkbox" checked={formState.landscape}
+                onChange={(e) => updateField('landscape', e.target.checked)} />
               <span>Landscape orientation</span>
             </label>
 
             <label className="field checkbox-field">
-              <input
-                type="checkbox"
-                checked={formState.printBackground}
-                onChange={(event) => updateField('printBackground', event.target.checked)}
-              />
+              <input type="checkbox" checked={formState.printBackground}
+                onChange={(e) => updateField('printBackground', e.target.checked)} />
               <span>Print background</span>
             </label>
 
             <label className="field checkbox-field">
-              <input
-                type="checkbox"
-                checked={formState.preferCSSPageSize}
-                onChange={(event) => updateField('preferCSSPageSize', event.target.checked)}
-              />
+              <input type="checkbox" checked={formState.preferCSSPageSize}
+                onChange={(e) => updateField('preferCSSPageSize', e.target.checked)} />
               <span>Prefer CSS page size</span>
             </label>
 
             <label className="field checkbox-field">
-              <input
-                type="checkbox"
-                checked={formState.displayHeaderFooter}
-                onChange={(event) => updateField('displayHeaderFooter', event.target.checked)}
-              />
+              <input type="checkbox" checked={formState.displayHeaderFooter}
+                onChange={(e) => updateField('displayHeaderFooter', e.target.checked)} />
               <span>Display header and footer</span>
             </label>
 
             <label className="field">
               <span>Margin Top</span>
-              <input
-                type="text"
-                value={formState.marginTop}
-                onChange={(event) => updateField('marginTop', event.target.value)}
-              />
+              <input type="text" value={formState.marginTop}
+                onChange={(e) => updateField('marginTop', e.target.value)} />
             </label>
 
             <label className="field">
               <span>Margin Right</span>
-              <input
-                type="text"
-                value={formState.marginRight}
-                onChange={(event) => updateField('marginRight', event.target.value)}
-              />
+              <input type="text" value={formState.marginRight}
+                onChange={(e) => updateField('marginRight', e.target.value)} />
             </label>
 
             <label className="field">
               <span>Margin Bottom</span>
-              <input
-                type="text"
-                value={formState.marginBottom}
-                onChange={(event) => updateField('marginBottom', event.target.value)}
-              />
+              <input type="text" value={formState.marginBottom}
+                onChange={(e) => updateField('marginBottom', e.target.value)} />
             </label>
 
             <label className="field">
               <span>Margin Left</span>
-              <input
-                type="text"
-                value={formState.marginLeft}
-                onChange={(event) => updateField('marginLeft', event.target.value)}
-              />
+              <input type="text" value={formState.marginLeft}
+                onChange={(e) => updateField('marginLeft', e.target.value)} />
             </label>
 
-            {formState.displayHeaderFooter ? (
+            {formState.displayHeaderFooter && (
               <>
                 <label className="field field-wide">
                   <span>Header Template</span>
-                  <textarea
-                    rows="5"
-                    value={formState.headerTemplate}
-                    onChange={(event) => updateField('headerTemplate', event.target.value)}
-                  />
+                  <textarea rows="5" value={formState.headerTemplate}
+                    onChange={(e) => updateField('headerTemplate', e.target.value)} />
                 </label>
-
                 <label className="field field-wide">
                   <span>Footer Template</span>
-                  <textarea
-                    rows="5"
-                    value={formState.footerTemplate}
-                    onChange={(event) => updateField('footerTemplate', event.target.value)}
-                  />
+                  <textarea rows="5" value={formState.footerTemplate}
+                    onChange={(e) => updateField('footerTemplate', e.target.value)} />
                 </label>
               </>
-            ) : null}
+            )}
           </div>
         </div>
 
         <div className="status-panel">
-          {status.error ? <p className="status-message status-error">{status.error}</p> : null}
-          {status.success ? <p className="status-message status-success">{status.success}</p> : null}
-          {status.usedEndpoint ? (
-            <p className="status-message">Used endpoint: {status.usedEndpoint}</p>
-          ) : null}
-          {status.generationTime ? (
-            <p className="status-message">Generation time: {status.generationTime} ms</p>
-          ) : null}
+          {status.error && <p className="status-message status-error">{status.error}</p>}
+          {status.success && <p className="status-message status-success">{status.success}</p>}
+          {status.usedEndpoint && <p className="status-message">Used endpoint: {status.usedEndpoint}</p>}
+          {status.generationTime && <p className="status-message">Generation time: {status.generationTime} ms</p>}
         </div>
 
         <div className="form-section">
           <div className="form-grid">
             <label className="field field-wide">
               <span>Output Filename</span>
-              <input
-                type="text"
-                value={outputFilename}
-                onChange={(event) => setOutputFilename(event.target.value)}
-                placeholder={getDefaultFilename()}
-              />
+              <input type="text" value={outputFilename}
+                onChange={(e) => setOutputFilename(e.target.value)}
+                placeholder={getDefaultFilename()} />
             </label>
           </div>
         </div>
 
         <div className="form-actions">
           <button className="button button-primary" type="submit" disabled={status.loading}>
-            {status.loading ? 'Generating...' : 'Generate PDF'}
+            {status.loading ? 'Generating…' : 'Generate PDF'}
           </button>
           <button className="button button-secondary" type="button" onClick={handleReset}>
             Reset Example

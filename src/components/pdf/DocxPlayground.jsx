@@ -183,28 +183,11 @@ export function DocxPlayground() {
   }
 
   return (
-    <section className="playground-panel glass-panel glass-panel-strong">
+    <section className="playground-panel">
       <form className="pdf-form" onSubmit={handleSubmit}>
-        <div className="form-section form-section-hero">
-          <div className="section-head">
-            <p className="section-label">Interactive service</p>
-            <h2>Convert DOCX to PDF</h2>
-            <p>
-              Upload a Word document, set optional output preferences, and download the converted PDF from the live service.
-            </p>
-          </div>
-
-          <div className="inline-banner">
-            <strong>Endpoint behavior</strong>
-            <p>
-              Auto select uses the primary deployment first and falls back to the secondary deployment when the request cannot complete.
-            </p>
-          </div>
-        </div>
-
         <div className="form-section">
           <div className="section-head">
-            <h2>Input</h2>
+            <h2>Document Upload</h2>
             <p>Upload a .docx file up to 5 MB. The conversion preserves formatting and embedded images.</p>
           </div>
 
