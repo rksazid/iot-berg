@@ -9,6 +9,7 @@ const tools = [
     key: 'html',
     slug: 'html-to-pdf',
     label: 'HTML to PDF',
+    shortLabel: 'HTML',
     badge: 'Puppeteer',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -22,6 +23,7 @@ const tools = [
     key: 'markdown',
     slug: 'md-to-pdf',
     label: 'Markdown to PDF',
+    shortLabel: 'Markdown',
     badge: 'GFM Spec',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -38,6 +40,7 @@ const tools = [
     key: 'docx',
     slug: 'docx-to-pdf',
     label: 'DOCX to PDF',
+    shortLabel: 'Word (.docx)',
     badge: 'Word Engine',
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -97,7 +100,8 @@ export function ConvertPage() {
                   className={`convert-tab${isActive ? ' convert-tab-active' : ''}`}
                 >
                   <span className="convert-tab-icon" aria-hidden="true">{t.icon}</span>
-                  <span className="convert-tab-label">{t.label}</span>
+                  <span className="convert-tab-label convert-tab-label-full">{t.label}</span>
+                  <span className="convert-tab-label convert-tab-label-short">{t.shortLabel}</span>
                   <span className="convert-tab-tag">{t.badge}</span>
                 </Link>
               )

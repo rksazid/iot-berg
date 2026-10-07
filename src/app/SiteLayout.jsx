@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 const navigationLinks = [
   { to: '/', label: 'Overview' },
+  { to: '/projects', label: 'Projects & APIs' },
   { to: '/convert', label: 'Document Studio' },
 ]
 
@@ -42,7 +43,7 @@ export function SiteLayout() {
           </div>
 
           <button
-            className="menu-toggle"
+            className={`menu-toggle ${menuOpen ? 'menu-toggle-open' : ''}`}
             type="button"
             aria-label="Toggle navigation"
             aria-expanded={menuOpen}
@@ -62,12 +63,17 @@ export function SiteLayout() {
                     `nav-link${isActive ? ' nav-link-active' : ''}`
                   }
                   to={link.to}
+                  onClick={() => setMenuOpen(false)}
                 >
                   {link.label}
                 </NavLink>
               ))}
             </nav>
-            <NavLink className="button button-primary header-cta" to="/convert">
+            <NavLink
+              className="button button-primary header-cta"
+              to="/convert"
+              onClick={() => setMenuOpen(false)}
+            >
               <span>Launch Studio</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14" />
@@ -77,6 +83,14 @@ export function SiteLayout() {
           </div>
         </div>
       </header>
+
+      {menuOpen && (
+        <div
+          className="mobile-nav-backdrop"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       <main className="site-main">
         <Outlet />
@@ -109,6 +123,14 @@ export function SiteLayout() {
 
             <div className="footer-links-group">
               <div className="footer-col">
+                <h4>Featured Projects & APIs</h4>
+                <NavLink to="/projects?tab=api">pdf-lagbe API Docs</NavLink>
+                <a href="https://github.com/rksazid/pdf-lagbe" target="_blank" rel="noopener noreferrer">pdf-lagbe GitHub</a>
+                <a href="https://quranwordbyword.onrender.com/" target="_blank" rel="noopener noreferrer">Quran Word by Word PWA</a>
+                <a href="https://newagekidsschool.com/" target="_blank" rel="noopener noreferrer">New Age Kids School</a>
+              </div>
+
+              <div className="footer-col">
                 <h4>Conversion Engines</h4>
                 <NavLink to="/convert/html">HTML to PDF Engine</NavLink>
                 <NavLink to="/convert/markdown">Markdown to PDF Engine</NavLink>
@@ -118,9 +140,9 @@ export function SiteLayout() {
 
               <div className="footer-col">
                 <h4>Architecture</h4>
-                <a href="#failover" onClick={(e) => { e.preventDefault(); window.location.href = '/#architecture'; }}>Multi-Cloud Failover</a>
-                <a href="#sandbox" onClick={(e) => { e.preventDefault(); window.location.href = '/#architecture'; }}>Ephemeral Sandbox</a>
-                <a href="#rest-api" onClick={(e) => { e.preventDefault(); window.location.href = '/convert'; }}>REST API Endpoints</a>
+                <NavLink to="/#architecture">Multi-Cloud Failover</NavLink>
+                <NavLink to="/#architecture">Ephemeral Sandbox</NavLink>
+                <NavLink to="/projects?tab=api">REST API Reference</NavLink>
               </div>
             </div>
           </div>

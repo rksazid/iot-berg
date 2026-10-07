@@ -2,12 +2,16 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { SiteLayout } from './SiteLayout'
 import { HomePage } from '../pages/HomePage'
 import { ConvertPage } from '../pages/ConvertPage'
+import { ProjectsPage } from '../pages/ProjectsPage'
 
 export function AppRouter() {
   return (
     <Routes>
       <Route element={<SiteLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/docs" element={<Navigate to="/projects?tab=api" replace />} />
+        <Route path="/showcase" element={<Navigate to="/projects" replace />} />
         <Route path="/convert" element={<ConvertPage />} />
         <Route path="/convert/:tool" element={<ConvertPage />} />
 
