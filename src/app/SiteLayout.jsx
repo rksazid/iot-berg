@@ -23,17 +23,21 @@ export function SiteLayout() {
 
       <header className="site-header-wrap">
         <div className="site-header glass-panel">
-          <NavLink className="brand" to="/">
+          <NavLink className="brand" to="/" aria-label="IoT-Berg Home">
             <div className="brand-mark">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
+              <img
+                src="/icons/app-icon.png"
+                alt="IoT-Berg Icon"
+                className="brand-logo-img"
+                width="38"
+                height="38"
+              />
             </div>
             <div className="brand-copy">
-              <span className="brand-name">IoT-Berg</span>
-              <span className="brand-badge-text">Software Solutions</span>
+              <span className="brand-name">
+                <span className="brand-highlight">IoT</span>-BERG
+              </span>
+              <span className="brand-badge-text">Web · Mobile · Cloud · APIs</span>
             </div>
           </NavLink>
 
@@ -100,18 +104,15 @@ export function SiteLayout() {
         <div className="site-footer glass-panel">
           <div className="footer-top">
             <div className="footer-brand">
-              <div className="brand" style={{ marginBottom: '0.75rem' }}>
-                <div className="brand-mark" style={{ width: '2rem', height: '2rem' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                </div>
-                <div className="brand-copy">
-                  <span className="brand-name" style={{ fontSize: '1rem' }}>IoT-Berg</span>
-                </div>
-              </div>
+              <NavLink className="footer-brand-badge" to="/" aria-label="IoT-Berg Home">
+                <img
+                  src="/brand/iotberg-logo-horizontal.png"
+                  alt="IoT-Berg — Web, Mobile, API, Cloud, IoT"
+                  className="footer-brand-logo"
+                  width="180"
+                  height="60"
+                />
+              </NavLink>
               <p className="footer-copy">
                 High-performance software solutions, automated document conversion pipelines, and resilient cloud architectures engineered for growing software platforms.
               </p>

@@ -371,6 +371,15 @@ export function HomePage() {
 
       {/* Enterprise Call To Action */}
       <section className="cta-panel glass-panel glass-panel-strong">
+        <div className="cta-brand-badge-wrap">
+          <img
+            src="/brand/iotberg-badge-slab.png"
+            alt="IoT-Berg Seal"
+            className="cta-brand-badge-img"
+            width="72"
+            height="72"
+          />
+        </div>
         <div className="cta-copy">
           <span className="section-label">Deploy Today</span>
           <h2>Automate your document generation pipeline with zero overhead.</h2>

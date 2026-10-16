@@ -232,15 +232,45 @@ textarea {
   font-family: var(--font-sans);
 }
 
+.brand-logo-horizontal {
+  height: 40px;
+  width: auto;
+  max-width: 140px;
+  border-radius: 8px;
+  display: block;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.brand-horizontal-wrap:hover .brand-logo-horizontal {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+}
+
 .brand-mark {
-  width: 2.35rem;
-  height: 2.35rem;
-  display: inline-grid;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+  width: 2.45rem;
+  height: 2.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 3px 12px rgba(6, 182, 212, 0.24);
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.brand:hover .brand-mark {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 6px 18px rgba(6, 182, 212, 0.38);
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .brand-copy {
@@ -254,6 +284,11 @@ textarea {
   letter-spacing: -0.025em;
   color: var(--text);
   line-height: 1.1;
+}
+
+.brand-highlight {
+  color: #0284c7;
+  font-weight: 800;
 }
 
 .brand-badge-text {
@@ -1311,6 +1346,23 @@ button:focus-visible,
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.4);
+}
+
+.cta-brand-badge-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cta-brand-badge-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 24px rgba(6, 182, 212, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.15);
+  display: block;
 }
 
 .cta-copy {
@@ -2505,6 +2557,28 @@ button:focus-visible,
   gap: 0.55rem;
 }
 
+.footer-brand-badge {
+  display: inline-block;
+  line-height: 0;
+  margin-bottom: 0.35rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  width: fit-content;
+}
+
+.footer-brand-badge:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.footer-brand-logo {
+  height: 48px;
+  width: auto;
+  max-width: 170px;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+}
+
 .footer-copy {
   margin: 0;
   font-size: 0.84rem;
@@ -3419,6 +3493,13 @@ button:focus-visible,
   .cta-panel {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .cta-brand-badge-img {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
   }
 
   .workspace-head-body {
