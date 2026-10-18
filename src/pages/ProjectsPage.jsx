@@ -56,6 +56,31 @@ export function ProjectsPage() {
             Explore our open-access developer engines, high-performance web applications, and cloud-native software platforms. All systems are maintained with production SLAs.
           </p>
 
+          <div className="projects-lead-byline">
+            <span className="byline-label">Technical Direction:</span>
+            <a
+              href="https://rksazid.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="byline-link"
+              title="Visit Team Lead Portfolio"
+            >
+              <img
+                src="/team/rezaul-karim-avatar.png"
+                alt="MD. Rezaul Karim"
+                className="byline-avatar"
+                width="22"
+                height="22"
+              />
+              <span>MD. Rezaul Karim (Project Manager & Team Lead)</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
+
           <div className="projects-nav-tabs" role="tablist">
             <button
               type="button"

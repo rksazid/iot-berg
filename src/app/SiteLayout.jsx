@@ -72,6 +72,21 @@ export function SiteLayout() {
                   {link.label}
                 </NavLink>
               ))}
+              <a
+                href="https://rksazid.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-link nav-link-external"
+                title="MD. Rezaul Karim — Project Manager & Team Lead Portfolio"
+                onClick={() => setMenuOpen(false)}
+              >
+                <span>Team Lead</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
             </nav>
             <NavLink
               className="button button-primary header-cta"
@@ -145,11 +160,43 @@ export function SiteLayout() {
                 <NavLink to="/#architecture">Ephemeral Sandbox</NavLink>
                 <NavLink to="/projects?tab=api">REST API Reference</NavLink>
               </div>
+
+              <div className="footer-col">
+                <h4>Leadership & Team</h4>
+                <a
+                  href="https://rksazid.github.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-lead-link"
+                >
+                  <strong>MD. Rezaul Karim</strong>
+                  <span className="footer-subtext">PM & Team Lead Portfolio ↗</span>
+                </a>
+                <a href="https://github.com/rksazid" target="_blank" rel="noopener noreferrer">
+                  GitHub (@rksazid)
+                </a>
+                <a href="https://www.linkedin.com/in/rksazid/" target="_blank" rel="noopener noreferrer">
+                  LinkedIn Profile
+                </a>
+                <a href="mailto:rksazid@gmail.com">
+                  Contact Team Lead
+                </a>
+              </div>
             </div>
           </div>
 
           <div className="footer-bottom">
-            <p>© {new Date().getFullYear()} IoT-Berg. Enterprise Document Systems & Software Solutions.</p>
+            <p>
+              © {new Date().getFullYear()} IoT-Berg · Technical Leadership & Project Management by{' '}
+              <a
+                href="https://rksazid.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-lead-inline"
+              >
+                MD. Rezaul Karim (rksazid)
+              </a>
+            </p>
             <div className="footer-legal-badges">
               <span className="legal-badge">Zero Data Persistence</span>
               <span className="legal-badge">TLS Encrypted</span>

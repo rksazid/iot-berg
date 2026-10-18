@@ -369,6 +369,114 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Team Leadership & Project Management Section */}
+      <section id="leadership" className="leadership-section">
+        <div className="section-head-center">
+          <div className="hero-eyebrow-wrap">
+            <span className="section-label">Team Leadership</span>
+            <span className="version-pill">Project Manager & Lead</span>
+          </div>
+          <h2 className="section-title">Engineered under expert technical leadership.</h2>
+          <p className="section-subtitle">
+            Meet the Project Manager and Team Lead guiding IoT-Berg’s architecture, document pipelines, and cloud platform delivery.
+          </p>
+        </div>
+
+        <div className="leader-card glass-panel">
+          <div className="leader-card-grid">
+            <div className="leader-photo-column">
+              <div className="leader-avatar-frame">
+                <img
+                  src="/team/rezaul-karim-portrait.jpg"
+                  alt="MD. Rezaul Karim — Project Manager & Team Lead, Team IoT-Berg"
+                  className="leader-avatar-img"
+                  width="180"
+                  height="180"
+                />
+                <div className="leader-status-chip">
+                  <span className="status-ping-inline" />
+                  <span>Team Lead & PM</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="leader-info-column">
+              <div className="leader-header-row">
+                <div className="leader-tag-row">
+                  <span className="project-tag-pill tag-brand">IoT-Berg Project Lead</span>
+                  <span className="leader-location">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Dhaka, Bangladesh · KUET CSE
+                  </span>
+                </div>
+                <h3 className="leader-name">MD. Rezaul Karim</h3>
+                <p className="leader-role">
+                  Project Manager & Team Lead at Team IoT-Berg · Lead Software Engineer
+                </p>
+              </div>
+
+              <p className="leader-bio">
+                Lead Software Engineer with 6+ years of production experience architecting high-concurrency web platforms, microservices handling 1,500+ requests/sec, and fault-tolerant document engines. Guiding Team IoT-Berg across full-stack product engineering, cloud automation, and zero-downtime multi-cloud deployment.
+              </p>
+
+              <div className="leader-skills-row">
+                <span className="tech-tag">Ruby on Rails</span>
+                <span className="tech-tag">Java Spring Boot</span>
+                <span className="tech-tag">AWS Cloud</span>
+                <span className="tech-tag">Microservices</span>
+                <span className="tech-tag">Docker</span>
+                <span className="tech-tag">PostgreSQL</span>
+                <span className="tech-tag">React / Vue</span>
+                <span className="tech-tag">High Concurrency</span>
+              </div>
+
+              <div className="leader-actions-row">
+                <a
+                  className="button button-primary"
+                  href="https://rksazid.github.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>Explore Portfolio (rksazid.github.io)</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+                <a
+                  className="button button-secondary"
+                  href="https://github.com/rksazid"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="GitHub Profile"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                  <span>GitHub</span>
+                </a>
+                <a
+                  className="button button-ghost"
+                  href="https://www.linkedin.com/in/rksazid/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="LinkedIn Profile"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 110-4.14 2.07 2.07 0 010 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/>
+                  </svg>
+                  <span>LinkedIn</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Enterprise Call To Action */}
       <section className="cta-panel glass-panel glass-panel-strong">
         <div className="cta-brand-badge-wrap">
