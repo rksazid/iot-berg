@@ -140,6 +140,7 @@ export function SiteLayout() {
             <div className="footer-links-group">
               <div className="footer-col">
                 <h4>Featured Projects & APIs</h4>
+                <a href="https://easy-check-in-app.vercel.app/" target="_blank" rel="noopener noreferrer">Easy Check-In PWA</a>
                 <NavLink to="/projects?tab=api">pdf-lagbe API Docs</NavLink>
                 <a href="https://github.com/rksazid/pdf-lagbe" target="_blank" rel="noopener noreferrer">pdf-lagbe GitHub</a>
                 <a href="https://quranwordbyword.onrender.com/" target="_blank" rel="noopener noreferrer">Quran Word by Word PWA</a>
