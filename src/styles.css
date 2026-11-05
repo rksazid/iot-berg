@@ -937,7 +937,7 @@ button:focus-visible,
 
 .home-projects-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 1.25rem;
 }
 
@@ -1019,6 +1019,12 @@ button:focus-visible,
   background: rgba(13, 148, 136, 0.12);
   color: #0f766e;
   border: 1px solid rgba(13, 148, 136, 0.28);
+}
+
+.tag-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.28);
 }
 
 .project-status-indicator {
@@ -3079,7 +3085,7 @@ button:focus-visible,
 
 .projects-cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 1.25rem;
 }
 
