@@ -112,10 +112,10 @@ export function WorkOrdersPage() {
       {/* Page Header */}
       <div className="subpage-header glass-panel">
         <div className="subpage-copy">
-          <span className="section-label">Order Pipeline</span>
-          <h2 className="subpage-title">Client Work Orders</h2>
+          <span className="section-label">Client Contracts</span>
+          <h2 className="subpage-title">Work Orders</h2>
           <p className="subpage-desc">
-            Authorized client engineering contracts, project scopes, delivery milestones, and advance payment terms.
+            Manage client engineering contracts, project scopes, and milestone payment terms.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export function WorkOrdersPage() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>Record Work Order</span>
+            <span>+ New Work Order</span>
           </button>
         )}
       </div>
@@ -140,12 +140,14 @@ export function WorkOrdersPage() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search by client company, project name, or WO-ref..."
+            placeholder="Search client, project, or work order reference..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <span className="filter-count">{filteredOrders.length} Work Orders</span>
+        <span className="filter-count">
+          {filteredOrders.length} {filteredOrders.length === 1 ? 'Work Order' : 'Work Orders'}
+        </span>
       </div>
 
       {/* Work Orders List / Table */}
@@ -264,7 +266,7 @@ export function WorkOrdersPage() {
           <div className="modal-dialog glass-panel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {editingOrder ? `Edit Work Order ${formData.id}` : 'Record Received Work Order'}
+                {editingOrder ? `Edit Work Order ${formData.id}` : 'New Work Order'}
               </h3>
               <button type="button" className="modal-close-btn" onClick={() => setShowModal(false)}>
                 ✕

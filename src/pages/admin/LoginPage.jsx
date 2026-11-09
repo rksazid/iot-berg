@@ -64,8 +64,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="page admin-login-page">
+    <div className="page admin-login-page standalone-login-page">
       <div className="login-shell">
+        <div className="login-back-wrap">
+          <Link to="/" className="login-back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            <span>Back to IoT-Berg</span>
+          </Link>
+        </div>
+
         <div className="login-card glass-panel">
           <div className="login-header">
             <div className="login-logo-row">
@@ -76,11 +86,11 @@ export function LoginPage() {
                 width="36"
                 height="36"
               />
-              <span className="login-badge-pill">Internal Portal</span>
+              <span className="login-badge-pill">Admin Workspace</span>
             </div>
-            <h1 className="login-title">IoT-Berg Engineering</h1>
+            <h1 className="login-title">IoT-Berg Operations</h1>
             <p className="login-sub">
-              Sign in to manage received work orders, advance payments, and authorized money receipts.
+              Sign in to manage client work orders, advance cash payments, and verifiable receipts.
             </p>
           </div>
 

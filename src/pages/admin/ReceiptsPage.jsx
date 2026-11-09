@@ -100,10 +100,10 @@ export function ReceiptsPage() {
       {/* Page Header */}
       <div className="subpage-header glass-panel">
         <div className="subpage-copy">
-          <span className="section-label">Payment Accounting</span>
-          <h2 className="subpage-title">Authorized Money Receipts</h2>
+          <span className="section-label">Verified Vouchers</span>
+          <h2 className="subpage-title">Payment Receipts</h2>
           <p className="subpage-desc">
-            Official verifiable payment vouchers. Every receipt features online QR code verification, authorized signatures, and direct PDF generation.
+            Tamper-evident payment receipts with online QR verification, authorized signatures, and instant PDF download.
           </p>
         </div>
 
@@ -113,7 +113,7 @@ export function ReceiptsPage() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span>Issue Money Receipt</span>
+            <span>+ Issue Receipt</span>
           </Link>
         )}
       </div>
@@ -128,12 +128,14 @@ export function ReceiptsPage() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search by receipt number, client company, or project..."
+            placeholder="Search receipt #, client, or project..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <span className="filter-count">{filteredReceipts.length} Receipts</span>
+        <span className="filter-count">
+          {filteredReceipts.length} {filteredReceipts.length === 1 ? 'Receipt' : 'Receipts'}
+        </span>
       </div>
 
       {/* Receipts Table Card */}

@@ -227,10 +227,10 @@ export function CreateReceiptPage() {
       {/* Header */}
       <div className="subpage-header glass-panel">
         <div className="subpage-copy">
-          <span className="section-label">Money Receipt Generator</span>
-          <h2 className="subpage-title">Issue Official Verifiable Payment Receipt</h2>
+          <span className="section-label">Receipt Generator</span>
+          <h2 className="subpage-title">Issue Payment Receipt</h2>
           <p className="subpage-desc">
-            Generate an authenticated payment voucher with online verification QR code, authorized signature, and pdf-lagbe PDF compilation.
+            Create an authenticated receipt with online QR verification, authorized signature, and PDF export.
           </p>
         </div>
       </div>
@@ -238,7 +238,7 @@ export function CreateReceiptPage() {
       <div className="create-receipt-layout">
         {/* Left: Input Form */}
         <form onSubmit={handleCreateReceipt} className="receipt-form-panel glass-panel">
-          <h3 className="panel-section-title">1. Work Order & Client Particulars</h3>
+          <h3 className="panel-section-title">1. Client & Project Details</h3>
 
           <div className="form-group">
             <label htmlFor="wo-select">Link to Work Order</label>
@@ -294,7 +294,7 @@ export function CreateReceiptPage() {
           </div>
 
           <h3 className="panel-section-title" style={{ marginTop: '1.5rem' }}>
-            2. Payment & Advance Details
+            2. Payment Details
           </h3>
 
           <div className="form-row-3col">
@@ -367,7 +367,7 @@ export function CreateReceiptPage() {
           </div>
 
           <h3 className="panel-section-title" style={{ marginTop: '1.5rem' }}>
-            3. Authorized Signatory & Signature
+            3. Signatory & Official Seal
           </h3>
 
           <div className="form-row-2col">
@@ -510,14 +510,14 @@ export function CreateReceiptPage() {
               {isSaving ? (
                 <>
                   <span className="spinner-inline" />
-                  <span>Issuing Money Receipt...</span>
+                  <span>Issuing Receipt...</span>
                 </>
               ) : (
                 <>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  <span>Authorize & Issue Official Receipt</span>
+                  <span>Authorize & Issue Receipt</span>
                 </>
               )}
             </button>

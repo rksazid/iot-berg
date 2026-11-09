@@ -73,13 +73,13 @@ export function AdminDashboardPage() {
         <div className="dashboard-hero-copy">
           <div className="hero-eyebrow-wrap">
             <span className="eyebrow">
-              <span className="eyebrow-dot" /> Financial & Order Management
+              <span className="eyebrow-dot" /> Operations Overview
             </span>
             <span className="version-pill">Role: {currentUser.role.toUpperCase()}</span>
           </div>
-          <h2 className="dashboard-hero-title">Overview: Work Orders & Payments</h2>
+          <h2 className="dashboard-hero-title">Dashboard Overview</h2>
           <p className="dashboard-hero-desc">
-            Track authorized client work orders, advance payments received, verified money receipts, and online verification states.
+            Track active client work orders, advance cash payments, and tamper-verified receipts.
           </p>
         </div>
 
@@ -91,16 +91,14 @@ export function AdminDashboardPage() {
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span>New Work Order</span>
+                <span>+ New Work Order</span>
               </Link>
               <Link to="/admin/receipts/new" className="button button-primary">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="12" y1="18" x2="12" y2="12" />
-                  <line x1="9" y1="15" x2="15" y2="15" />
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span>Issue Money Receipt</span>
+                <span>+ Issue Receipt</span>
               </Link>
             </>
           )}
@@ -116,11 +114,11 @@ export function AdminDashboardPage() {
             </svg>
           </div>
           <div className="stat-card-data">
-            <span className="stat-label">Advance Payments Received</span>
+            <span className="stat-label">Advance Received</span>
             <strong className="stat-value" style={{ color: '#0d9488' }}>
               {formatCurrencyBDT(stats.totalPaymentsReceived)}
             </strong>
-            <span className="stat-subtext">Received in Cash (20% Advance)</span>
+            <span className="stat-subtext">Cash advance (20%)</span>
           </div>
         </div>
 
@@ -132,9 +130,11 @@ export function AdminDashboardPage() {
             </svg>
           </div>
           <div className="stat-card-data">
-            <span className="stat-label">Total Work Orders Value</span>
+            <span className="stat-label">Total Contract Value</span>
             <strong className="stat-value">{formatCurrencyBDT(stats.totalContractValue)}</strong>
-            <span className="stat-subtext">{stats.workOrdersCount} Authorized Orders</span>
+            <span className="stat-subtext">
+              {stats.workOrdersCount} {stats.workOrdersCount === 1 ? 'Authorized Order' : 'Authorized Orders'}
+            </span>
           </div>
         </div>
 
@@ -146,11 +146,11 @@ export function AdminDashboardPage() {
             </svg>
           </div>
           <div className="stat-card-data">
-            <span className="stat-label">Outstanding Balance Due</span>
+            <span className="stat-label">Outstanding Balance</span>
             <strong className="stat-value" style={{ color: '#f59e0b' }}>
               {formatCurrencyBDT(stats.pendingBalance)}
             </strong>
-            <span className="stat-subtext">80% Milestone Balance</span>
+            <span className="stat-subtext">Pending balance (80%)</span>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function AdminDashboardPage() {
           <div className="stat-card-data">
             <span className="stat-label">Active Projects</span>
             <strong className="stat-value">{stats.activeProjectsCount} Active</strong>
-            <span className="stat-subtext">Engineering Deliveries</span>
+            <span className="stat-subtext">In delivery</span>
           </div>
         </div>
       </section>
@@ -174,11 +174,11 @@ export function AdminDashboardPage() {
         <section className="admin-card-section glass-panel">
           <div className="section-card-header">
             <div>
-              <h3 className="section-card-title">Received Work Orders</h3>
-              <p className="section-card-sub">Active client engineering engagements</p>
+              <h3 className="section-card-title">Recent Work Orders</h3>
+              <p className="section-card-sub">Authorized client contracts & scopes</p>
             </div>
             <Link to="/admin/work-orders" className="link-subtle">
-              View All ({workOrders.length}) →
+              View All →
             </Link>
           </div>
 
@@ -219,15 +219,15 @@ export function AdminDashboardPage() {
           </div>
         </section>
 
-        {/* Right Column: Issued Money Receipts */}
+        {/* Right Column: Recent Payment Receipts */}
         <section className="admin-card-section glass-panel">
           <div className="section-card-header">
             <div>
-              <h3 className="section-card-title">Issued Money Receipts</h3>
-              <p className="section-card-sub">Authorized receipts with QR verification</p>
+              <h3 className="section-card-title">Recent Payment Receipts</h3>
+              <p className="section-card-sub">Tamper-verified with QR verification</p>
             </div>
             <Link to="/admin/receipts" className="link-subtle">
-              Manage Receipts ({receipts.length}) →
+              View All →
             </Link>
           </div>
 

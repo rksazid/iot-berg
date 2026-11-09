@@ -3,9 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 const navigationLinks = [
   { to: '/', label: 'Overview' },
-  { to: '/projects', label: 'Projects & APIs' },
+  { to: '/projects', label: 'Projects' },
   { to: '/convert', label: 'Document Studio' },
-  { to: '/admin', label: 'Work Orders & Receipts' },
 ]
 
 export function SiteLayout() {
@@ -158,11 +157,11 @@ export function SiteLayout() {
               </div>
 
               <div className="footer-col">
-                <h4>Operations & Receipts</h4>
-                <NavLink to="/admin">Work Orders & Admin</NavLink>
-                <NavLink to="/admin/work-orders">Received Work Orders</NavLink>
-                <NavLink to="/admin/receipts">Money Receipts</NavLink>
-                <NavLink to="/verify/IB-REC-2026-001">Verify Advance Receipt (৳90k)</NavLink>
+                <h4>Operations & Portal</h4>
+                <NavLink to="/admin">Admin Portal</NavLink>
+                <NavLink to="/admin/work-orders">Work Orders</NavLink>
+                <NavLink to="/admin/receipts">Payment Receipts</NavLink>
+                <NavLink to="/verify/IB-REC-2026-001">Verify Advance Receipt</NavLink>
               </div>
 
               <div className="footer-col">

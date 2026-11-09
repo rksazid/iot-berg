@@ -102,12 +102,12 @@ export function VerifyReceiptPage() {
               </svg>
             </div>
             <div className="verify-status-copy">
-              <span className="verify-kicker">IoT-Berg Cloud Verification Registry</span>
-              <h1 className="verify-heading">Official Payment Receipt Verified</h1>
+              <span className="verify-kicker">IoT-Berg Cloud Registry</span>
+              <h1 className="verify-heading">Payment Receipt Verified</h1>
             </div>
           </div>
           <p className="verify-desc">
-            This digital record confirms that the payment below was received and authorized by Team IoT-Berg Engineering. The physical receipt matches our cloud security registry.
+            Authentic payment record verified against the IoT-Berg cloud security registry.
           </p>
           <div className="verify-meta-strip">
             <span className="meta-tag">
@@ -140,7 +140,7 @@ export function VerifyReceiptPage() {
 
               <div className="receipt-header-right">
                 <div className="receipt-number-box">
-                  <span className="receipt-num-label">Official Money Receipt</span>
+                  <span className="receipt-num-label">Official Payment Receipt</span>
                   <span className="receipt-num-val">{receipt.receiptNumber || receipt.id}</span>
                 </div>
               </div>
