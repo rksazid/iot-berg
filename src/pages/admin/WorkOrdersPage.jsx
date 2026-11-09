@@ -22,7 +22,14 @@ export function WorkOrdersPage() {
     clientAddress: '',
     projectName: '',
     projectScope: '',
-    contractValue: '',
+    coreContractValue: '350000',
+    serverCharge: '60000',
+    serverPeriod: '1 Year',
+    maintenanceCharge: '40000',
+    maintenancePeriod: '1 Year',
+    otherAdditionalCharge: '0',
+    otherAdditionalNote: '',
+    contractValue: '450000',
     advancePercentage: '20',
     status: 'active',
     orderDate: new Date().toISOString().split('T')[0],
@@ -52,6 +59,13 @@ export function WorkOrdersPage() {
       clientAddress: '',
       projectName: '',
       projectScope: '',
+      coreContractValue: '350000',
+      serverCharge: '60000',
+      serverPeriod: '1 Year',
+      maintenanceCharge: '40000',
+      maintenancePeriod: '1 Year',
+      otherAdditionalCharge: '0',
+      otherAdditionalNote: '',
       contractValue: '450000',
       advancePercentage: '20',
       status: 'active',
@@ -64,6 +78,7 @@ export function WorkOrdersPage() {
 
   const handleOpenEdit = (wo) => {
     setEditingOrder(wo)
+    const core = wo.coreContractValue != null ? String(wo.coreContractValue) : String(Math.max(0, (wo.contractValue || 450000) - (wo.totalAdditionalCharges || 100000)))
     setFormData({
       id: wo.id,
       clientName: wo.clientName,
@@ -73,6 +88,13 @@ export function WorkOrdersPage() {
       clientAddress: wo.clientAddress || '',
       projectName: wo.projectName,
       projectScope: wo.projectScope || '',
+      coreContractValue: core,
+      serverCharge: String(wo.serverCharge != null ? wo.serverCharge : 60000),
+      serverPeriod: wo.serverPeriod || '1 Year',
+      maintenanceCharge: String(wo.maintenanceCharge != null ? wo.maintenanceCharge : 40000),
+      maintenancePeriod: wo.maintenancePeriod || '1 Year',
+      otherAdditionalCharge: String(wo.otherAdditionalCharge || 0),
+      otherAdditionalNote: wo.otherAdditionalNote || '',
       contractValue: String(wo.contractValue),
       advancePercentage: String(wo.advancePercentage || 20),
       status: wo.status,
@@ -83,9 +105,23 @@ export function WorkOrdersPage() {
     setShowModal(true)
   }
 
+  const calculatedAddons =
+    (Number(formData.serverCharge) || 0) +
+    (Number(formData.maintenanceCharge) || 0) +
+    (Number(formData.otherAdditionalCharge) || 0)
+  const calculatedGrandTotal = (Number(formData.coreContractValue) || 0) + calculatedAddons
+  const calculatedAdvanceAmount = Math.round(
+    (calculatedGrandTotal * (Number(formData.advancePercentage) || 0)) / 100,
+  )
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    workOrderStore.saveWorkOrder(formData)
+    workOrderStore.saveWorkOrder({
+      ...formData,
+      contractValue: calculatedGrandTotal,
+      advanceAmount: calculatedAdvanceAmount,
+      totalAdditionalCharges: calculatedAddons,
+    })
     setShowModal(false)
     setSearchParams({})
     loadOrders()
@@ -189,10 +225,28 @@ export function WorkOrdersPage() {
                       <div className="table-scope-cell">
                         <strong>{wo.projectName}</strong>
                         <p>{wo.projectScope}</p>
+                        {wo.totalAdditionalCharges > 0 && (
+                          <div className="table-addon-pills">
+                            <span className="addon-scope-pill" title="Operational Service (1 Year)">
+                              ⚙ Server: {formatCurrencyBDT(wo.serverCharge || 60000)}/yr
+                            </span>
+                            <span className="addon-scope-pill" title="Operational Service (1 Year)">
+                              🛡 Maintenance: {formatCurrencyBDT(wo.maintenanceCharge || 40000)}/yr
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td>
-                      <strong className="contract-num">{formatCurrencyBDT(wo.contractValue)}</strong>
+                      <div className="table-contract-col">
+                        <strong className="contract-num">{formatCurrencyBDT(wo.contractValue)}</strong>
+                        {wo.totalAdditionalCharges > 0 && (
+                          <div className="contract-breakdown-sub">
+                            <span className="sub-core">Core: {formatCurrencyBDT(wo.coreContractValue || (wo.contractValue - wo.totalAdditionalCharges))}</span>
+                            <span className="sub-addon">+ {formatCurrencyBDT(wo.totalAdditionalCharges)} Add-ons</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div className="advance-pill-box">
@@ -393,22 +447,78 @@ export function WorkOrdersPage() {
                 />
               </div>
 
-              <div className="form-row-3col">
-                <div className="form-group">
-                  <label htmlFor="contract-val">Total Contract Value (BDT)</label>
-                  <input
-                    id="contract-val"
-                    type="number"
-                    className="form-input"
-                    placeholder="450000"
-                    value={formData.contractValue}
-                    onChange={(e) => setFormData({ ...formData, contractValue: e.target.value })}
-                    required
-                  />
+              {/* Core Development Scope Value */}
+              <div className="form-group">
+                <label htmlFor="core-contract-val">Core Project Development Scope (BDT)</label>
+                <input
+                  id="core-contract-val"
+                  type="number"
+                  className="form-input"
+                  placeholder="350000"
+                  value={formData.coreContractValue}
+                  onChange={(e) => setFormData({ ...formData, coreContractValue: e.target.value })}
+                  required
+                />
+                <span className="input-hint">Core engineering, architecture, microservices, and deliverable features.</span>
+              </div>
+
+              {/* Additional Operational Services (Distinct Section) */}
+              <div className="modal-addons-box glass-panel">
+                <div className="addons-box-header">
+                  <span className="addons-pill-badge">Additional Operational Services</span>
+                  <p className="addons-box-sub">
+                    Cloud server hosting and maintenance support charges are additional operational allocations, billed separately from the core software deliverables.
+                  </p>
                 </div>
 
+                <div className="form-row-2col">
+                  <div className="form-group">
+                    <label htmlFor="server-charge">Server Charge (1 Year Cloud Hosting)</label>
+                    <input
+                      id="server-charge"
+                      type="number"
+                      className="form-input"
+                      placeholder="60000"
+                      value={formData.serverCharge}
+                      onChange={(e) => setFormData({ ...formData, serverCharge: e.target.value })}
+                    />
+                    <span className="input-hint">Managed cloud servers, cluster uptime & storage</span>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="maint-charge">Software Maintenance & Support (1 Year)</label>
+                    <input
+                      id="maint-charge"
+                      type="number"
+                      className="form-input"
+                      placeholder="40000"
+                      value={formData.maintenanceCharge}
+                      onChange={(e) => setFormData({ ...formData, maintenanceCharge: e.target.value })}
+                    />
+                    <span className="input-hint">24/7 security updates, bug fixes & SLA</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Financial Summary & Advance */}
+              <div className="modal-financial-summary-strip">
+                <div className="summary-item">
+                  <span className="summary-item-label">Core Scope:</span>
+                  <span className="summary-item-val">{formatCurrencyBDT(Number(formData.coreContractValue) || 0)}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-item-label">+ Operational Add-ons:</span>
+                  <span className="summary-item-val" style={{ color: '#4f46e5' }}>+{formatCurrencyBDT(calculatedAddons)}</span>
+                </div>
+                <div className="summary-item total">
+                  <span className="summary-item-label">= Total Contract Value:</span>
+                  <span className="summary-item-val">{formatCurrencyBDT(calculatedGrandTotal)}</span>
+                </div>
+              </div>
+
+              <div className="form-row-2col" style={{ marginTop: '0.75rem' }}>
                 <div className="form-group">
-                  <label htmlFor="adv-pct">Advance Percentage (%)</label>
+                  <label htmlFor="adv-pct">Advance Percentage Agreed (%)</label>
                   <input
                     id="adv-pct"
                     type="number"
@@ -421,13 +531,9 @@ export function WorkOrdersPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Calculated Advance</label>
-                  <div className="form-readonly-val">
-                    {formatCurrencyBDT(
-                      Math.round(
-                        ((Number(formData.contractValue) || 0) * (Number(formData.advancePercentage) || 0)) / 100,
-                      ),
-                    )}
+                  <label>Calculated Advance Amount</label>
+                  <div className="form-readonly-val" style={{ color: '#0d9488', fontWeight: 700 }}>
+                    {formatCurrencyBDT(calculatedAdvanceAmount)}
                   </div>
                 </div>
               </div>

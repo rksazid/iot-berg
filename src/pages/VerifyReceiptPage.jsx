@@ -183,6 +183,44 @@ export function VerifyReceiptPage() {
               </div>
             </div>
 
+            {/* Operational Add-ons & Financial Separation */}
+            {(receipt.totalAdditionalCharges > 0 || receipt.serverCharge > 0 || receipt.maintenanceCharge > 0) && (
+              <div className="receipt-addons-callout glass-panel">
+                <div className="addons-callout-header">
+                  <span className="addons-callout-badge">Additional Operational Services</span>
+                  <span className="addons-callout-total">
+                    Add-ons: {formatCurrencyBDT(receipt.totalAdditionalCharges || 100000)}
+                  </span>
+                </div>
+                <div className="addons-callout-grid">
+                  <div className="addons-callout-tile">
+                    <span className="tile-subtitle">Core Software Deliverables</span>
+                    <strong className="tile-amount">
+                      {formatCurrencyBDT(receipt.coreContractValue || (receipt.totalContractValue - (receipt.totalAdditionalCharges || 100000)))}
+                    </strong>
+                    <span className="tile-detail">Base engineering & architecture</span>
+                  </div>
+                  <div className="addons-callout-tile">
+                    <span className="tile-subtitle">Server Management (1 Year)</span>
+                    <strong className="tile-amount" style={{ color: '#4f46e5' }}>
+                      {formatCurrencyBDT(receipt.serverCharge || 60000)}
+                    </strong>
+                    <span className="tile-detail">Managed cloud & object storage</span>
+                  </div>
+                  <div className="addons-callout-tile">
+                    <span className="tile-subtitle">Software Maintenance (1 Year)</span>
+                    <strong className="tile-amount" style={{ color: '#4f46e5' }}>
+                      {formatCurrencyBDT(receipt.maintenanceCharge || 40000)}
+                    </strong>
+                    <span className="tile-detail">Security patches & uptime SLA</span>
+                  </div>
+                </div>
+                <p className="addons-callout-disclaimer">
+                  * Notice: Server management and software maintenance charges are additional operational allocations, billed separately from the core software engineering deliverables.
+                </p>
+              </div>
+            )}
+
             {/* Project Scope Description */}
             <div className="receipt-desc-box">
               <span className="desc-box-label">Project / Work Order Scope</span>

@@ -30,6 +30,12 @@ export function CreateReceiptPage() {
   const [clientAddress, setClientAddress] = useState('')
   const [projectName, setProjectName] = useState('')
   const [totalContractValue, setTotalContractValue] = useState(450000)
+  const [coreContractValue, setCoreContractValue] = useState(350000)
+  const [serverCharge, setServerCharge] = useState(60000)
+  const [serverPeriod, setServerPeriod] = useState('1 Year')
+  const [maintenanceCharge, setMaintenanceCharge] = useState(40000)
+  const [maintenancePeriod, setMaintenancePeriod] = useState('1 Year')
+  const [totalAdditionalCharges, setTotalAdditionalCharges] = useState(100000)
   const [advancePercent, setAdvancePercent] = useState(20)
 
   // Signatory
@@ -60,6 +66,12 @@ export function CreateReceiptPage() {
         setClientAddress(wo.clientAddress || '')
         setProjectName(wo.projectName)
         setTotalContractValue(wo.contractValue)
+        setCoreContractValue(wo.coreContractValue || (wo.contractValue - (wo.totalAdditionalCharges || 100000)))
+        setServerCharge(wo.serverCharge != null ? wo.serverCharge : 60000)
+        setServerPeriod(wo.serverPeriod || '1 Year')
+        setMaintenanceCharge(wo.maintenanceCharge != null ? wo.maintenanceCharge : 40000)
+        setMaintenancePeriod(wo.maintenancePeriod || '1 Year')
+        setTotalAdditionalCharges(wo.totalAdditionalCharges || 100000)
         setAdvancePercent(wo.advancePercentage || 20)
         setAmount(String(wo.advanceAmount || Math.round((wo.contractValue * 20) / 100)))
         setTransactionNote(
@@ -202,6 +214,12 @@ export function CreateReceiptPage() {
         receiptDate: paymentDate,
         transactionNote,
         totalContractValue,
+        coreContractValue,
+        serverCharge,
+        serverPeriod,
+        maintenanceCharge,
+        maintenancePeriod,
+        totalAdditionalCharges,
         advancePercent,
         balanceRemaining,
         signatoryName,

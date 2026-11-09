@@ -18,6 +18,18 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     ? formatCurrencyBDT(receipt.balanceRemaining)
     : '—'
 
+  const coreVal = receipt.coreContractValue != null ? receipt.coreContractValue : 350000
+  const serverCharge = receipt.serverCharge != null ? receipt.serverCharge : 60000
+  const serverPeriod = receipt.serverPeriod || '1 Year'
+  const maintenanceCharge = receipt.maintenanceCharge != null ? receipt.maintenanceCharge : 40000
+  const maintenancePeriod = receipt.maintenancePeriod || '1 Year'
+  const totalAdditional = serverCharge + maintenanceCharge + (receipt.otherAdditionalCharge || 0)
+  const formattedCore = formatCurrencyBDT(coreVal)
+  const formattedServer = formatCurrencyBDT(serverCharge)
+  const formattedMaintenance = formatCurrencyBDT(maintenanceCharge)
+  const formattedAdditional = formatCurrencyBDT(totalAdditional)
+  const hasAdditional = totalAdditional > 0
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -411,22 +423,34 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       </div>
 
       <div class="info-box">
-        <div class="box-heading">Project & Work Order Details</div>
+        <div class="box-heading">Project & Financial Breakdown</div>
         <div class="info-line">
           <span class="info-label">Work Order Ref:</span>
           <span class="info-value" style="font-family: monospace;">${receipt.workOrderId || 'WO-2026-001'}</span>
         </div>
         <div class="info-line">
-          <span class="info-label">Project Name:</span>
+          <span class="info-label">Project Scope:</span>
           <span class="info-value">${receipt.projectName || 'Engineering Services'}</span>
         </div>
         <div class="info-line">
-          <span class="info-label">Total Contract:</span>
-          <span class="info-value">${formattedTotal}</span>
+          <span class="info-label">Core Engineering:</span>
+          <span class="info-value">${formattedCore}</span>
+        </div>
+        ${
+          hasAdditional
+            ? `<div class="info-line">
+                <span class="info-label">Operational Add-ons:</span>
+                <span class="info-value" style="color: #4338ca; font-weight: 600;">${formattedAdditional} (Separate)</span>
+              </div>`
+            : ''
+        }
+        <div class="info-line">
+          <span class="info-label">Total Contract Value:</span>
+          <span class="info-value" style="font-weight: 700;">${formattedTotal}</span>
         </div>
         <div class="info-line">
           <span class="info-label">Remaining Balance:</span>
-          <span class="info-value" style="color: #b91c1c;">${formattedBalance}</span>
+          <span class="info-value" style="color: #b91c1c; font-weight: 600;">${formattedBalance}</span>
         </div>
       </div>
     </div>
@@ -455,6 +479,35 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
         </tr>
       </tbody>
     </table>
+
+    ${
+      hasAdditional
+        ? `<!-- Distinct Operational Add-ons Section -->
+        <div style="margin-top: 12px; margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <strong style="font-size: 11px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
+              Additional Operational Services (Separate from Core Project Deliverables)
+            </strong>
+            <span style="font-size: 10px; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">
+              Total: ${formattedAdditional}
+            </span>
+          </div>
+          <table style="width: 100%; font-size: 11px; color: #334155; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 2px 0;">• <strong>Managed Server & Cloud Infrastructure:</strong> ${formattedServer}</td>
+              <td style="text-align: right; color: #64748b;">Allocation: ${serverPeriod} Cloud Hosting & Storage</td>
+            </tr>
+            <tr>
+              <td style="padding: 2px 0;">• <strong>Software Maintenance & Security SLA:</strong> ${formattedMaintenance}</td>
+              <td style="text-align: right; color: #64748b;">Allocation: ${maintenancePeriod} Security Patches & Uptime SLA</td>
+            </tr>
+          </table>
+          <div style="font-size: 10px; color: #64748b; margin-top: 5px; font-style: italic; border-top: 1px dotted #e2e8f0; padding-top: 4px;">
+            * Important Note: Server management and software maintenance charges are additional operational allocations distinct from base software engineering deliverables.
+          </div>
+        </div>`
+        : ''
+    }
 
     <!-- QR Code Online Verification Strip -->
     <div class="verification-strip">

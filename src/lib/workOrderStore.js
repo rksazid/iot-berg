@@ -14,7 +14,17 @@ const INITIAL_WORK_ORDERS = [
     projectName: 'Enterprise Document Engine & Automated Cloud Pipeline',
     projectScope:
       'Full-cycle architecture, backend microservices development, and deployment of a resilient document-to-PDF rendering pipeline with sub-second turnaround, dynamic JavaScript chart execution, and multi-cloud failover.',
-    contractValue: 450000,
+    // Financial Breakdown: Core Engineering vs Additional Operational Services
+    coreContractValue: 350000,
+    serverCharge: 60000,
+    serverPeriod: '1 Year',
+    maintenanceCharge: 40000,
+    maintenancePeriod: '1 Year',
+    otherAdditionalCharge: 0,
+    otherAdditionalNote: '',
+    totalAdditionalCharges: 100000,
+    contractValue: 450000, // Core (৳350,000) + Additional Operational Services (৳100,000)
+    hasAdditionalCharges: true,
     advancePercentage: 20,
     advanceAmount: 90000,
     totalReceived: 90000,
@@ -22,7 +32,8 @@ const INITIAL_WORK_ORDERS = [
     status: 'active', // active, in_progress, completed, on_hold
     orderDate: '2026-11-09',
     deliveryDate: '2027-01-30',
-    notes: '20% advance payment received in cash upon work order execution and signing.',
+    notes:
+      '20% advance payment received in cash upon work order execution. Includes 1-year managed cloud server hosting and 1-year software maintenance support billed as separate operational allocations.',
     createdAt: '2026-11-09T10:00:00.000Z',
     updatedAt: '2026-11-09T10:30:00.000Z',
   },
@@ -47,6 +58,12 @@ const INITIAL_RECEIPTS = [
     transactionNote:
       'Official cash advance payment received in full as per Work Order WO-2026-001 milestone schedule.',
     totalContractValue: 450000,
+    coreContractValue: 350000,
+    serverCharge: 60000,
+    serverPeriod: '1 Year',
+    maintenanceCharge: 40000,
+    maintenancePeriod: '1 Year',
+    totalAdditionalCharges: 100000,
     advancePercent: 20,
     balanceRemaining: 360000,
     signatoryName: 'MD. Rezaul Karim',
@@ -72,7 +89,47 @@ function loadStored(key, fallback) {
       localStorage.setItem(key, JSON.stringify(fallback))
       return fallback
     }
-    return JSON.parse(raw)
+    const data = JSON.parse(raw)
+    // Defensive migration: ensure coreContractValue & additional services are populated
+    if (Array.isArray(data)) {
+      return data.map((item) => {
+        if (key === WO_STORAGE_KEY && item.coreContractValue == null) {
+          const server = item.serverCharge != null ? Number(item.serverCharge) : 60000
+          const maint = item.maintenanceCharge != null ? Number(item.maintenanceCharge) : 40000
+          const totalAddons = server + maint
+          const totalContract = Number(item.contractValue) || 450000
+          return {
+            ...item,
+            coreContractValue: Math.max(0, totalContract - totalAddons),
+            serverCharge: server,
+            serverPeriod: item.serverPeriod || '1 Year',
+            maintenanceCharge: maint,
+            maintenancePeriod: item.maintenancePeriod || '1 Year',
+            otherAdditionalCharge: Number(item.otherAdditionalCharge) || 0,
+            otherAdditionalNote: item.otherAdditionalNote || '',
+            totalAdditionalCharges: totalAddons,
+            hasAdditionalCharges: totalAddons > 0,
+          }
+        }
+        if (key === REC_STORAGE_KEY && item.coreContractValue == null) {
+          const server = item.serverCharge != null ? Number(item.serverCharge) : 60000
+          const maint = item.maintenanceCharge != null ? Number(item.maintenanceCharge) : 40000
+          const totalAddons = server + maint
+          const totalContract = Number(item.totalContractValue) || 450000
+          return {
+            ...item,
+            coreContractValue: Math.max(0, totalContract - totalAddons),
+            serverCharge: server,
+            serverPeriod: item.serverPeriod || '1 Year',
+            maintenanceCharge: maint,
+            maintenancePeriod: item.maintenancePeriod || '1 Year',
+            totalAdditionalCharges: totalAddons,
+          }
+        }
+        return item
+      })
+    }
+    return data
   } catch (err) {
     console.warn(`Failed to read ${key} from storage:`, err)
     return fallback
@@ -104,7 +161,18 @@ export const workOrderStore = {
     const all = this.getWorkOrders()
     const now = new Date().toISOString()
 
-    const contractVal = Number(workOrderData.contractValue) || 0
+    const serverCharge = Number(workOrderData.serverCharge) || 0
+    const maintenanceCharge = Number(workOrderData.maintenanceCharge) || 0
+    const otherAdditionalCharge = Number(workOrderData.otherAdditionalCharge) || 0
+    const totalAdditionalCharges = serverCharge + maintenanceCharge + otherAdditionalCharge
+
+    let coreVal = Number(workOrderData.coreContractValue)
+    if (isNaN(coreVal) || coreVal <= 0) {
+      const fallbackTotal = Number(workOrderData.contractValue) || 450000
+      coreVal = Math.max(0, fallbackTotal - totalAdditionalCharges)
+    }
+
+    const contractVal = coreVal + totalAdditionalCharges
     const advPercent = Number(workOrderData.advancePercentage) || 0
     const calculatedAdv = Math.round((contractVal * advPercent) / 100)
 
@@ -115,6 +183,15 @@ export const workOrderStore = {
       savedItem = {
         ...all[existingIndex],
         ...workOrderData,
+        coreContractValue: coreVal,
+        serverCharge,
+        serverPeriod: workOrderData.serverPeriod || '1 Year',
+        maintenanceCharge,
+        maintenancePeriod: workOrderData.maintenancePeriod || '1 Year',
+        otherAdditionalCharge,
+        otherAdditionalNote: workOrderData.otherAdditionalNote || '',
+        totalAdditionalCharges,
+        hasAdditionalCharges: totalAdditionalCharges > 0,
         contractValue: contractVal,
         advancePercentage: advPercent,
         advanceAmount: calculatedAdv,
@@ -128,6 +205,15 @@ export const workOrderStore = {
       savedItem = {
         ...workOrderData,
         id: generatedId,
+        coreContractValue: coreVal,
+        serverCharge,
+        serverPeriod: workOrderData.serverPeriod || '1 Year',
+        maintenanceCharge,
+        maintenancePeriod: workOrderData.maintenancePeriod || '1 Year',
+        otherAdditionalCharge,
+        otherAdditionalNote: workOrderData.otherAdditionalNote || '',
+        totalAdditionalCharges,
+        hasAdditionalCharges: totalAdditionalCharges > 0,
         contractValue: contractVal,
         advancePercentage: advPercent,
         advanceAmount: calculatedAdv,
@@ -166,6 +252,24 @@ export const workOrderStore = {
     const amountNum = Number(receiptData.amount) || 0
     const inWords = receiptData.amountInWords || numberToWordsBDT(amountNum)
 
+    const linkedWo = receiptData.workOrderId ? this.getWorkOrder(receiptData.workOrderId) : null
+    const coreVal = receiptData.coreContractValue != null
+      ? Number(receiptData.coreContractValue)
+      : (linkedWo?.coreContractValue || 350000)
+    const serverCharge = receiptData.serverCharge != null
+      ? Number(receiptData.serverCharge)
+      : (linkedWo?.serverCharge || 60000)
+    const serverPeriod = receiptData.serverPeriod || linkedWo?.serverPeriod || '1 Year'
+    const maintenanceCharge = receiptData.maintenanceCharge != null
+      ? Number(receiptData.maintenanceCharge)
+      : (linkedWo?.maintenanceCharge || 40000)
+    const maintenancePeriod = receiptData.maintenancePeriod || linkedWo?.maintenancePeriod || '1 Year'
+    const totalAdditionalCharges = serverCharge + maintenanceCharge + (Number(receiptData.otherAdditionalCharge) || 0)
+    const totalContractValue = receiptData.totalContractValue
+      ? Number(receiptData.totalContractValue)
+      : (coreVal + totalAdditionalCharges)
+    const balanceRemaining = Math.max(0, totalContractValue - amountNum)
+
     const existingIndex = all.findIndex((item) => item.id === receiptData.id)
 
     let savedItem
@@ -173,6 +277,14 @@ export const workOrderStore = {
       savedItem = {
         ...all[existingIndex],
         ...receiptData,
+        coreContractValue: coreVal,
+        serverCharge,
+        serverPeriod,
+        maintenanceCharge,
+        maintenancePeriod,
+        totalAdditionalCharges,
+        totalContractValue,
+        balanceRemaining,
         amount: amountNum,
         amountInWords: inWords,
         updatedAt: now,
@@ -191,6 +303,14 @@ export const workOrderStore = {
         ...receiptData,
         id: generatedId,
         receiptNumber: generatedId,
+        coreContractValue: coreVal,
+        serverCharge,
+        serverPeriod,
+        maintenanceCharge,
+        maintenancePeriod,
+        totalAdditionalCharges,
+        totalContractValue,
+        balanceRemaining,
         amount: amountNum,
         amountInWords: inWords,
         status: receiptData.status || 'verified',
