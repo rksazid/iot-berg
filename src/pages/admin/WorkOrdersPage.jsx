@@ -19,25 +19,27 @@ export function WorkOrdersPage() {
   // Work Order Form State (Strictly Work Order scope — no forced advance fields)
   const [formData, setFormData] = useState({
     id: '',
-    clientName: '',
-    clientContactPerson: '',
-    clientEmail: '',
-    clientPhone: '',
-    clientAddress: '',
-    projectName: '',
-    projectScope: '',
-    coreContractValue: '350000',
-    serverCharge: '60000',
+    clientName: 'Sazin Innovative Industries Ltd.',
+    clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
+    clientEmail: 'sazin.ltd@gmail.com',
+    clientPhone: '+88-02-9007014',
+    clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
+    projectName: 'Sazin Business Website (Canada & Bangladesh)',
+    projectScope:
+      'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
+    coreContractValue: '450000',
+    serverCharge: '30000',
     serverPeriod: '1 Year',
-    maintenanceCharge: '40000',
+    maintenanceCharge: '0',
     maintenancePeriod: '1 Year',
     otherAdditionalCharge: '0',
-    otherAdditionalNote: '',
-    contractValue: '450000',
+    otherAdditionalNote: 'Yearly Server Charge & Maintenance Fee',
+    contractValue: '480000',
     status: 'active',
-    orderDate: new Date().toISOString().split('T')[0],
-    deliveryDate: '',
-    notes: '',
+    orderDate: '2026-11-02',
+    deliveryDate: '2027-01-31',
+    notes:
+      'Official signed Work Order SIIL - A10003. Initial 90-Days Post-Launch Warranty & Free Support included. 3-Year Service & Maintenance Agreement.',
   })
 
   useEffect(() => {
@@ -59,26 +61,28 @@ export function WorkOrdersPage() {
   const handleOpenCreate = () => {
     setEditingOrder(null)
     setFormData({
-      id: `WO-${new Date().getFullYear()}-${String(workOrders.length + 1).padStart(3, '0')}`,
-      clientName: '',
-      clientContactPerson: '',
-      clientEmail: '',
-      clientPhone: '',
-      clientAddress: '',
-      projectName: '',
-      projectScope: '',
-      coreContractValue: '350000',
-      serverCharge: '60000',
+      id: `SIIL-${new Date().getFullYear()}-${String(workOrders.length + 1).padStart(3, '0')}`,
+      clientName: 'Sazin Innovative Industries Ltd.',
+      clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
+      clientEmail: 'sazin.ltd@gmail.com',
+      clientPhone: '+88-02-9007014',
+      clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
+      projectName: 'Sazin Business Website (Canada & Bangladesh)',
+      projectScope:
+        'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
+      coreContractValue: '450000',
+      serverCharge: '30000',
       serverPeriod: '1 Year',
-      maintenanceCharge: '40000',
+      maintenanceCharge: '0',
       maintenancePeriod: '1 Year',
       otherAdditionalCharge: '0',
-      otherAdditionalNote: '',
-      contractValue: '450000',
+      otherAdditionalNote: 'Yearly Server Charge & Maintenance Fee',
+      contractValue: '480000',
       status: 'active',
-      orderDate: new Date().toISOString().split('T')[0],
-      deliveryDate: '',
-      notes: '',
+      orderDate: '2026-11-02',
+      deliveryDate: '2027-01-31',
+      notes:
+        'Official signed Work Order SIIL - A10003. Initial 90-Days Post-Launch Warranty & Free Support included. 3-Year Service & Maintenance Agreement.',
     })
     setShowModal(true)
   }
@@ -275,18 +279,33 @@ export function WorkOrdersPage() {
 
                     <td>
                       <div className="table-scope-cell">
-                        <strong className="project-title">{wo.projectName}</strong>
+                        <div className="project-title-line">
+                          <strong className="project-title">{wo.projectName}</strong>
+                          {wo.pdfDocUrl && (
+                            <a
+                              href={wo.pdfDocUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="wo-scan-pill"
+                              title="Open Original Signed Work Order Document (PDF)"
+                            >
+                              📄 WO Scan
+                            </a>
+                          )}
+                        </div>
                         <p className="project-desc-clamp" title={wo.projectScope}>
                           {wo.projectScope}
                         </p>
                         {wo.totalAdditionalCharges > 0 && (
                           <div className="table-addon-pills">
-                            <span className="addon-scope-pill" title="1-Year Cloud Hosting">
-                              ⚙ Server: {formatCurrencyBDT(wo.serverCharge || 60000)}/yr
+                            <span className="addon-scope-pill" title="Yearly Operational Services">
+                              ⚙ Server & Maintenance Fee: {formatCurrencyBDT(wo.serverCharge || wo.totalAdditionalCharges)}/yr
                             </span>
-                            <span className="addon-scope-pill" title="1-Year Software Maintenance & SLA">
-                              🛡 Maintenance: {formatCurrencyBDT(wo.maintenanceCharge || 40000)}/yr
-                            </span>
+                            {wo.maintenanceCharge > 0 && (
+                              <span className="addon-scope-pill" title="1-Year Software Maintenance & SLA">
+                                🛡 Maintenance: {formatCurrencyBDT(wo.maintenanceCharge)}/yr
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

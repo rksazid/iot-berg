@@ -1,67 +1,90 @@
 import { numberToWordsBDT } from './numberToWords.js'
 
-const WO_STORAGE_KEY = 'iotberg_work_orders_v1'
-const REC_STORAGE_KEY = 'iotberg_payment_receipts_v1'
+const WO_STORAGE_KEY = 'iotberg_work_orders_v2'
+const REC_STORAGE_KEY = 'iotberg_payment_receipts_v2'
 
 const INITIAL_WORK_ORDERS = [
   {
-    id: 'WO-2026-001',
-    clientName: 'TechMatrix Solutions Ltd.',
-    clientContactPerson: 'Mr. Tareq Hasan (Director of Technology)',
-    clientEmail: 'tareq.hasan@techmatrix.com',
-    clientPhone: '+880 1712-345678',
-    clientAddress: 'Road 11, Block D, Banani, Dhaka-1213, Bangladesh',
-    projectName: 'Enterprise Document Engine & Automated Cloud Pipeline',
+    id: 'SIIL-A10003',
+    workOrderRef: 'SIIL - A10003',
+    clientName: 'Sazin Innovative Industries Ltd.',
+    clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
+    clientContactPhone: '01303-215742',
+    requestedBy: 'Rakibul Milon (Rakib)',
+    clientDepartment: 'IT (Website)',
+    clientEmail: 'sazin.ltd@gmail.com',
+    clientBillingEmail: 'sazin.ltd2020@gmail.com',
+    clientPhone: '+88-02-9007014',
+    clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
+    clientWebsite: 'www.sazin.com.bd',
+    projectName: 'Sazin Business Website (Canada & Bangladesh)',
     projectScope:
-      'Full-cycle architecture, backend microservices development, and deployment of a resilient document-to-PDF rendering pipeline with sub-second turnaround, dynamic JavaScript chart execution, and multi-cloud failover.',
-    // Financial Breakdown: Core Engineering vs Additional Operational Services
-    coreContractValue: 350000,
-    serverCharge: 60000,
+      'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
+    jobType: 'Industrial B2B Website',
+    billTo: 'MD. Rezaul Karim',
+    // Financial Breakdown as per Work Order SIIL - A10003
+    coreContractValue: 450000,
+    serverCharge: 30000, // Yearly Server Charge & Maintenance Fee
     serverPeriod: '1 Year',
-    maintenanceCharge: 40000,
+    maintenanceCharge: 0, // Bundled into yearly operational fee
     maintenancePeriod: '1 Year',
     otherAdditionalCharge: 0,
-    otherAdditionalNote: '',
-    totalAdditionalCharges: 100000,
-    contractValue: 450000, // Core (৳350,000) + Additional Operational Services (৳100,000)
+    otherAdditionalNote: 'Yearly Server Charge & Maintenance Fee',
+    totalAdditionalCharges: 30000,
+    contractValue: 480000, // Subtotal + Additional = 480,000 BDT
     hasAdditionalCharges: true,
-    status: 'active', // active, in_progress, completed, on_hold
-    orderDate: '2026-11-09',
-    deliveryDate: '2027-01-30',
+    status: 'active',
+    orderDate: '2026-11-02', // 02.11.26
+    deliveryDate: '2027-01-31',
+    specialInstructions: [
+      '01. Initial 90-Days Post-Launch Warranty & Free Support',
+      '02. 3-Year Service & Maintenance Agreement + 2-Year Extension Option',
+      '03. Major revisions will be billed according to the scope of work (negotiable)',
+      '04. Client is responsible for Yearly domain charge',
+    ],
+    milestones: [
+      { step: '01', pct: '20%', desc: 'Scope freeze, UX baseline, deployment plan (Advance)', amount: 96000 },
+      { step: '02', pct: '30%', desc: 'Catalogue, comparison MVP, CMS, revisions hardened', amount: 144000 },
+      { step: '03', pct: '30%', desc: 'Search, filters, CAD center, RFQ, launch dataset', amount: 144000 },
+      { step: '04', pct: '20%', desc: 'SQA verification, SSL/CDN cutover, final handover', amount: 96000 },
+    ],
     notes:
-      'Client engagement includes 1-year managed cloud server hosting and 1-year software maintenance support billed as separate operational allocations.',
-    createdAt: '2026-11-09T10:00:00.000Z',
-    updatedAt: '2026-11-09T10:30:00.000Z',
+      'Official signed Work Order SIIL - A10003. Initial 90-Days post-launch warranty & free support included. 3-Year service & maintenance agreement with 2-year extension option. Client responsible for yearly domain charge.',
+    scannedDocUrl: '/work-orders/SIIL-A10003-scan.jpg',
+    pdfDocUrl: '/work-orders/SIIL-A10003-work-order.pdf',
+    createdAt: '2026-11-02T10:00:00.000Z',
+    updatedAt: '2026-11-08T11:00:00.000Z',
   },
 ]
 
 const INITIAL_RECEIPTS = [
   {
     id: 'IB-REC-2026-001',
-    workOrderId: 'WO-2026-001',
     receiptNumber: 'IB-REC-2026-001',
-    clientName: 'TechMatrix Solutions Ltd.',
-    clientContactPerson: 'Mr. Tareq Hasan',
-    clientEmail: 'tareq.hasan@techmatrix.com',
-    clientAddress: 'Road 11, Block D, Banani, Dhaka-1213, Bangladesh',
-    projectName: 'Enterprise Document Engine & Automated Cloud Pipeline',
+    workOrderId: 'SIIL-A10003',
+    workOrderRef: 'SIIL - A10003',
+    clientName: 'Sazin Innovative Industries Ltd.',
+    clientContactPerson: 'Engr. Mr. Sabbir Ahmed (Mob: 01303-215742)',
+    clientEmail: 'sazin.ltd@gmail.com',
+    clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
+    projectName: 'Sazin Business Website (Canada & Bangladesh)',
     amount: 90000,
     amountInWords: 'Ninety Thousand BDT Only',
     paymentHead: 'Advance Payment',
     paymentCategory: 'Advance Payment',
     paymentMode: 'Cash',
-    paymentDate: '2026-11-09',
-    receiptDate: '2026-11-09',
+    paymentDate: '2026-11-08',
+    receiptDate: '2026-11-08',
     transactionNote:
-      'Official cash advance payment received in full as per Work Order WO-2026-001 payment schedule.',
-    totalContractValue: 450000,
-    coreContractValue: 350000,
-    serverCharge: 60000,
+      'Advance cash payment received against Work Order SIIL - A10003 for Milestone 01 (Scope freeze, UX baseline & deployment plan).',
+    totalContractValue: 480000,
+    coreContractValue: 450000,
+    serverCharge: 30000,
     serverPeriod: '1 Year',
-    maintenanceCharge: 40000,
+    maintenanceCharge: 0,
     maintenancePeriod: '1 Year',
-    totalAdditionalCharges: 100000,
-    balanceRemaining: 360000,
+    totalAdditionalCharges: 30000,
+    balanceRemaining: 390000, // 480,000 - 90,000
     signatoryName: 'MD. Rezaul Karim',
     signatoryRole: 'Project Manager & Team Lead',
     signatoryCompany: 'IoT-Berg Engineering',
@@ -70,8 +93,8 @@ const INITIAL_RECEIPTS = [
     sealEnabled: true,
     status: 'verified',
     verificationHash: '9a4f8b2c1e7d0356ae29c54f8b190a3d4e7f81b0c3d2e5f6a7b8c9d0e1f2a3b4',
-    createdAt: '2026-11-09T10:30:00.000Z',
-    updatedAt: '2026-11-09T10:30:00.000Z',
+    createdAt: '2026-11-08T14:30:00.000Z',
+    updatedAt: '2026-11-08T14:30:00.000Z',
   },
 ]
 
@@ -81,51 +104,15 @@ function loadStored(key, fallback) {
       return fallback
     }
     const raw = localStorage.getItem(key)
-    if (!raw) {
+    if (raw === null) {
       localStorage.setItem(key, JSON.stringify(fallback))
       return fallback
     }
     const data = JSON.parse(raw)
-    // Defensive migration: ensure coreContractValue & additional services are populated
     if (Array.isArray(data)) {
-      return data.map((item) => {
-        if (key === WO_STORAGE_KEY && item.coreContractValue == null) {
-          const server = item.serverCharge != null ? Number(item.serverCharge) : 60000
-          const maint = item.maintenanceCharge != null ? Number(item.maintenanceCharge) : 40000
-          const totalAddons = server + maint
-          const totalContract = Number(item.contractValue) || 450000
-          return {
-            ...item,
-            coreContractValue: Math.max(0, totalContract - totalAddons),
-            serverCharge: server,
-            serverPeriod: item.serverPeriod || '1 Year',
-            maintenanceCharge: maint,
-            maintenancePeriod: item.maintenancePeriod || '1 Year',
-            otherAdditionalCharge: Number(item.otherAdditionalCharge) || 0,
-            otherAdditionalNote: item.otherAdditionalNote || '',
-            totalAdditionalCharges: totalAddons,
-            hasAdditionalCharges: totalAddons > 0,
-          }
-        }
-        if (key === REC_STORAGE_KEY && item.coreContractValue == null) {
-          const server = item.serverCharge != null ? Number(item.serverCharge) : 60000
-          const maint = item.maintenanceCharge != null ? Number(item.maintenanceCharge) : 40000
-          const totalAddons = server + maint
-          const totalContract = Number(item.totalContractValue) || 450000
-          return {
-            ...item,
-            coreContractValue: Math.max(0, totalContract - totalAddons),
-            serverCharge: server,
-            serverPeriod: item.serverPeriod || '1 Year',
-            maintenanceCharge: maint,
-            maintenancePeriod: item.maintenancePeriod || '1 Year',
-            totalAdditionalCharges: totalAddons,
-          }
-        }
-        return item
-      })
+      return data
     }
-    return data
+    return fallback
   } catch (err) {
     console.warn(`Failed to read ${key} from storage:`, err)
     return fallback
@@ -149,12 +136,24 @@ export const workOrderStore = {
     const receipts = this.getReceipts()
 
     return rawOrders.map((wo) => {
-      // Find all payments linked to this work order
-      const payments = receipts.filter(
-        (r) => r.workOrderId === wo.id && r.status !== 'revoked',
-      )
+      // Find all payments linked to this work order (matching id or workOrderRef)
+      const woNormId = (wo.id || '').replace(/\s+/g, '').toLowerCase()
+      const woNormRef = (wo.workOrderRef || '').replace(/\s+/g, '').toLowerCase()
+
+      const payments = receipts.filter((r) => {
+        if (r.status === 'revoked') return false
+        const rNormWo = (r.workOrderId || '').replace(/\s+/g, '').toLowerCase()
+        const rNormRef = (r.workOrderRef || '').replace(/\s+/g, '').toLowerCase()
+        return (
+          rNormWo === woNormId ||
+          rNormWo === woNormRef ||
+          rNormRef === woNormId ||
+          rNormRef === woNormRef
+        )
+      })
+
       const actualReceived = payments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
-      const contractVal = Number(wo.contractValue) || 0
+      const contractVal = Number(wo.contractValue) || 480000
       const balanceDue = Math.max(0, contractVal - actualReceived)
 
       return {
@@ -172,12 +171,26 @@ export const workOrderStore = {
 
   getWorkOrder(id) {
     const all = this.getWorkOrders()
-    return all.find((item) => item.id === id) || null
+    const norm = (id || '').replace(/\s+/g, '').toLowerCase()
+    return (
+      all.find(
+        (item) =>
+          item.id === id ||
+          (item.id || '').replace(/\s+/g, '').toLowerCase() === norm ||
+          (item.workOrderRef || '').replace(/\s+/g, '').toLowerCase() === norm,
+      ) || null
+    )
   },
 
   getPaymentsForWorkOrder(workOrderId) {
     const receipts = this.getReceipts()
-    return receipts.filter((r) => r.workOrderId === workOrderId && r.status !== 'revoked')
+    const norm = (workOrderId || '').replace(/\s+/g, '').toLowerCase()
+    return receipts.filter((r) => {
+      if (r.status === 'revoked') return false
+      const rNormWo = (r.workOrderId || '').replace(/\s+/g, '').toLowerCase()
+      const rNormRef = (r.workOrderRef || '').replace(/\s+/g, '').toLowerCase()
+      return rNormWo === norm || rNormRef === norm
+    })
   },
 
   saveWorkOrder(workOrderData) {
@@ -191,7 +204,7 @@ export const workOrderStore = {
 
     let coreVal = Number(workOrderData.coreContractValue)
     if (isNaN(coreVal) || coreVal <= 0) {
-      const fallbackTotal = Number(workOrderData.contractValue) || 450000
+      const fallbackTotal = Number(workOrderData.contractValue) || 480000
       coreVal = Math.max(0, fallbackTotal - totalAdditionalCharges)
     }
 
@@ -219,7 +232,7 @@ export const workOrderStore = {
       all[existingIndex] = savedItem
     } else {
       const generatedId =
-        workOrderData.id || `WO-${new Date().getFullYear()}-${String(all.length + 1).padStart(3, '0')}`
+        workOrderData.id || `SIIL-${new Date().getFullYear()}-${String(all.length + 1).padStart(3, '0')}`
       savedItem = {
         ...workOrderData,
         id: generatedId,
@@ -256,7 +269,16 @@ export const workOrderStore = {
 
   getReceipt(id) {
     const all = this.getReceipts()
-    return all.find((item) => item.id === id || item.receiptNumber === id) || null
+    const norm = (id || '').replace(/\s+/g, '').toLowerCase()
+    return (
+      all.find(
+        (item) =>
+          item.id === id ||
+          item.receiptNumber === id ||
+          (item.id || '').replace(/\s+/g, '').toLowerCase() === norm ||
+          (item.receiptNumber || '').replace(/\s+/g, '').toLowerCase() === norm,
+      ) || null
+    )
   },
 
   saveReceipt(receiptData) {
@@ -270,16 +292,18 @@ export const workOrderStore = {
     const coreVal =
       receiptData.coreContractValue != null
         ? Number(receiptData.coreContractValue)
-        : linkedWo?.coreContractValue || 350000
+        : linkedWo?.coreContractValue || 450000
     const serverCharge =
       receiptData.serverCharge != null
         ? Number(receiptData.serverCharge)
-        : linkedWo?.serverCharge || 60000
+        : linkedWo?.serverCharge != null
+        ? linkedWo.serverCharge
+        : 30000
     const serverPeriod = receiptData.serverPeriod || linkedWo?.serverPeriod || '1 Year'
     const maintenanceCharge =
       receiptData.maintenanceCharge != null
         ? Number(receiptData.maintenanceCharge)
-        : linkedWo?.maintenanceCharge || 40000
+        : linkedWo?.maintenanceCharge || 0
     const maintenancePeriod =
       receiptData.maintenancePeriod || linkedWo?.maintenancePeriod || '1 Year'
     const totalAdditionalCharges =
@@ -292,7 +316,7 @@ export const workOrderStore = {
     const otherReceiptsForWo = linkedWo
       ? all.filter(
           (r) =>
-            r.workOrderId === linkedWo.id &&
+            (r.workOrderId === linkedWo.id || r.workOrderId === linkedWo.workOrderRef) &&
             r.id !== receiptData.id &&
             r.status !== 'revoked',
         )
@@ -304,7 +328,7 @@ export const workOrderStore = {
     const balanceRemaining = Math.max(0, totalContractValue - (previouslyReceived + amountNum))
 
     const paymentHead =
-      receiptData.paymentHead || receiptData.paymentCategory || 'Project Payment'
+      receiptData.paymentHead || receiptData.paymentCategory || 'Advance Payment'
 
     const existingIndex = all.findIndex((item) => item.id === receiptData.id)
 

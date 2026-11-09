@@ -6506,6 +6506,34 @@ button:focus-visible,
   white-space: nowrap;
 }
 
+.project-title-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.wo-scan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.wo-scan-pill:hover {
+  background: #bae6fd;
+  color: #0284c7;
+}
+
 .table-contract-col {
   display: flex;
   flex-direction: column;
