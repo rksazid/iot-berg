@@ -204,42 +204,110 @@ export function CreateReceiptPage() {
     }
   }
 
-  // Canvas Drawing Handlers
-  const startDrawing = (e) => {
+  // Initialize and resize canvas with HiDPI support
+  const initCanvas = () => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    if (!rect.width || !rect.height) return
 
+    const dpr = window.devicePixelRatio || 1
+    const targetWidth = Math.round(rect.width * dpr)
+    const targetHeight = Math.round(rect.height * dpr)
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth
+      canvas.height = targetHeight
+
+      const ctx = canvas.getContext('2d')
+      ctx.scale(dpr, dpr)
+      ctx.strokeStyle = '#0f766e'
+      ctx.lineWidth = 2.5
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+    }
+  }
+
+  useEffect(() => {
+    if (signatureMode === 'draw') {
+      const raf = requestAnimationFrame(initCanvas)
+      window.addEventListener('resize', initCanvas)
+      return () => {
+        cancelAnimationFrame(raf)
+        window.removeEventListener('resize', initCanvas)
+      }
+    }
+  }, [signatureMode])
+
+  // Coordinate normalizer accurately mapping screen pointer to canvas space
+  const getCanvasCoords = (e) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+
+    let clientX = e.clientX
+    let clientY = e.clientY
+
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    }
+
+    const scaleX = (canvas.width / (window.devicePixelRatio || 1)) / (rect.width || 1)
+    const scaleY = (canvas.height / (window.devicePixelRatio || 1)) / (rect.height || 1)
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    }
+  }
+
+  // Canvas Drawing Handlers with Pointer Events Support
+  const startDrawing = (e) => {
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    if (e.target.setPointerCapture && e.pointerId != null) {
+      try {
+        e.target.setPointerCapture(e.pointerId)
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    const { x, y } = getCanvasCoords(e)
+    const ctx = canvas.getContext('2d')
     ctx.beginPath()
     ctx.moveTo(x, y)
-    ctx.strokeStyle = '#0f766e'
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
     setIsDrawing(true)
   }
 
   const draw = (e) => {
     if (!isDrawing) return
+    e.preventDefault()
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
 
+    const { x, y } = getCanvasCoords(e)
+    const ctx = canvas.getContext('2d')
     ctx.lineTo(x, y)
     ctx.stroke()
   }
 
-  const stopDrawing = async () => {
+  const stopDrawing = async (e) => {
     if (!isDrawing) return
     setIsDrawing(false)
     const canvas = canvasRef.current
     if (!canvas) return
+
+    if (e && e.target.releasePointerCapture && e.pointerId != null) {
+      try {
+        e.target.releasePointerCapture(e.pointerId)
+      } catch (err) {
+        // ignore
+      }
+    }
 
     try {
       const optimized = await optimizeImage(canvas.toDataURL('image/png'), {
@@ -258,7 +326,10 @@ export function CreateReceiptPage() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.restore()
     setSignatureUrl('')
   }
 
@@ -690,13 +761,12 @@ export function CreateReceiptPage() {
                 <div className="signature-draw-zone">
                   <canvas
                     ref={canvasRef}
-                    width="360"
-                    height="120"
                     className="signature-canvas"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
+                    style={{ touchAction: 'none' }}
+                    onPointerDown={startDrawing}
+                    onPointerMove={draw}
+                    onPointerUp={stopDrawing}
+                    onPointerCancel={stopDrawing}
                   />
                   <div className="draw-actions">
                     <button type="button" className="button button-sm button-secondary" onClick={clearCanvas}>
