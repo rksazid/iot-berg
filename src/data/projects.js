@@ -130,9 +130,12 @@ export const featuredProjects = [
     tagline: 'Linguistic Study & Translation Progressive Web App',
     type: 'Progressive Web Application (PWA)',
     badge: 'Production PWA',
-    badgeVariant: 'accent',
+    badgeVariant: 'emerald',
     status: 'Production Live',
     liveUrl: 'https://quranwordbyword.onrender.com/',
+    image: '/projects/quran-word-by-word.jpg',
+    icon: '/projects/quran-icon.svg',
+    mediaBadge: 'Word-by-Word Study UI',
     summary:
       'A modern, privacy-first Progressive Web Application designed for in-depth Quranic study. Features word-by-word Bengali and English translations, root word analysis, offline Mushaf reading via Service Worker caching, and customizable Arabic typography.',
     description:
@@ -161,9 +164,12 @@ export const featuredProjects = [
     tagline: 'Institutional Management Platform & Student Admissions Portal',
     type: 'Institutional Platform & LMS',
     badge: 'Live School Portal',
-    badgeVariant: 'success',
+    badgeVariant: 'amber',
     status: 'Production Live',
     liveUrl: 'https://newagekidsschool.com/',
+    image: '/projects/new-age-kids-school.jpg',
+    icon: '/projects/kids-school-icon.svg',
+    mediaBadge: 'Institutional Portal',
     summary:
       'A comprehensive web portal and school management platform for New Age Kids School, serving hundreds of students across international cohorts in Japan, Bangladesh, and globally with admissions, digital academics, and Zoom integrations.',
     description:

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect width="48" height="48" rx="12" fill="#047857"/>
+  <!-- Rehal Book Stand -->
+  <path d="M12 36 L24 28 L36 36 M15 33 L24 26 L33 33" stroke="#fef08a" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Left Page -->
+  <path d="M24 14 C19 12 13 13 11 15 L11 29 C13 27 19 26 24 28 Z" fill="#ffffff" stroke="#10b981" stroke-width="1"/>
+  <!-- Right Page -->
+  <path d="M24 14 C29 12 35 13 37 15 L37 29 C35 27 29 26 24 28 Z" fill="#f8fafc" stroke="#10b981" stroke-width="1"/>
+  <!-- Page Lines -->
+  <line x1="14" y1="18" x2="21" y2="17" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="22" x2="21" y2="21" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="26" x2="20" y2="25" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="27" y1="17" x2="34" y2="18" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="27" y1="21" x2="34" y2="22" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="28" y1="25" x2="34" y2="26" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Golden Ribbon Bookmark -->
+  <path d="M24 14 L24 30 L22 28 L20 30 L20 15" fill="#f59e0b"/>
+</svg>

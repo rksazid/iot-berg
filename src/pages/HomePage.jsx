@@ -194,7 +194,7 @@ export function HomePage() {
                   />
                   <div className="project-card-media-badge">
                     <span className="media-badge-dot" />
-                    <span>Live PWA UI</span>
+                    <span>{project.mediaBadge || 'Live Interface'}</span>
                   </div>
                 </div>
               )}
