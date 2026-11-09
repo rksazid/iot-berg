@@ -5,6 +5,7 @@ const navigationLinks = [
   { to: '/', label: 'Overview' },
   { to: '/projects', label: 'Projects & APIs' },
   { to: '/convert', label: 'Document Studio' },
+  { to: '/admin', label: 'Work Orders & Receipts' },
 ]
 
 export function SiteLayout() {
@@ -154,6 +155,14 @@ export function SiteLayout() {
                 <NavLink to="/convert/markdown">Markdown to PDF Engine</NavLink>
                 <NavLink to="/convert/docx">Word (.docx) to PDF Engine</NavLink>
                 <NavLink to="/convert">Unified Studio</NavLink>
+              </div>
+
+              <div className="footer-col">
+                <h4>Operations & Receipts</h4>
+                <NavLink to="/admin">Work Orders & Admin</NavLink>
+                <NavLink to="/admin/work-orders">Received Work Orders</NavLink>
+                <NavLink to="/admin/receipts">Money Receipts</NavLink>
+                <NavLink to="/verify/IB-REC-2026-001">Verify Advance Receipt (৳90k)</NavLink>
               </div>
 
               <div className="footer-col">

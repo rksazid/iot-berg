@@ -3,6 +3,13 @@ import { SiteLayout } from './SiteLayout'
 import { HomePage } from '../pages/HomePage'
 import { ConvertPage } from '../pages/ConvertPage'
 import { ProjectsPage } from '../pages/ProjectsPage'
+import { VerifyReceiptPage } from '../pages/VerifyReceiptPage'
+import { LoginPage } from '../pages/admin/LoginPage'
+import { AdminLayout } from '../pages/admin/AdminLayout'
+import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
+import { WorkOrdersPage } from '../pages/admin/WorkOrdersPage'
+import { ReceiptsPage } from '../pages/admin/ReceiptsPage'
+import { CreateReceiptPage } from '../pages/admin/CreateReceiptPage'
 
 export function AppRouter() {
   return (
@@ -14,6 +21,20 @@ export function AppRouter() {
         <Route path="/showcase" element={<Navigate to="/projects" replace />} />
         <Route path="/convert" element={<ConvertPage />} />
         <Route path="/convert/:tool" element={<ConvertPage />} />
+
+        {/* Public Money Receipt Online Verification Portal */}
+        <Route path="/verify/:receiptId" element={<VerifyReceiptPage />} />
+
+        {/* Admin Login */}
+        <Route path="/admin/login" element={<LoginPage />} />
+
+        {/* Minimalist Admin Portal for Work Orders & Verifiable Receipts */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="work-orders" element={<WorkOrdersPage />} />
+          <Route path="receipts" element={<ReceiptsPage />} />
+          <Route path="receipts/new" element={<CreateReceiptPage />} />
+        </Route>
 
         {/* Legacy routes redirect into the unified converter workspace */}
         <Route path="/services" element={<Navigate to="/convert" replace />} />
