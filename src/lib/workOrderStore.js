@@ -149,7 +149,31 @@ function persist(key, data) {
 
 export const workOrderStore = {
   getWorkOrders() {
-    return loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
+    const rawOrders = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
+    const receipts = this.getReceipts()
+
+    return rawOrders.map((wo) => {
+      // Live compute total payments received strictly from existing active receipts
+      const actualReceived = receipts
+        .filter((r) => r.workOrderId === wo.id && r.status !== 'revoked')
+        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+
+      const contractVal = Number(wo.contractValue) || 0
+      const advPct = Number(wo.advancePercentage) || 20
+      const advAmount = Number(wo.advanceAmount) || Math.round((contractVal * advPct) / 100)
+      const balanceDue = Math.max(0, contractVal - actualReceived)
+
+      return {
+        ...wo,
+        contractValue: contractVal,
+        advanceAmount: advAmount,
+        totalReceived: actualReceived,
+        balanceDue,
+        isAdvancePaid: actualReceived >= advAmount && actualReceived > 0,
+        isFullyPaid: actualReceived >= contractVal && contractVal > 0,
+        hasPayments: actualReceived > 0,
+      }
+    })
   },
 
   getWorkOrder(id) {
@@ -158,7 +182,7 @@ export const workOrderStore = {
   },
 
   saveWorkOrder(workOrderData) {
-    const all = this.getWorkOrders()
+    const all = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
     const now = new Date().toISOString()
 
     const serverCharge = Number(workOrderData.serverCharge) || 0
@@ -195,7 +219,6 @@ export const workOrderStore = {
         contractValue: contractVal,
         advancePercentage: advPercent,
         advanceAmount: calculatedAdv,
-        balanceDue: Math.max(0, contractVal - (Number(workOrderData.totalReceived) || 0)),
         updatedAt: now,
       }
       all[existingIndex] = savedItem
@@ -217,8 +240,6 @@ export const workOrderStore = {
         contractValue: contractVal,
         advancePercentage: advPercent,
         advanceAmount: calculatedAdv,
-        totalReceived: Number(workOrderData.totalReceived) || 0,
-        balanceDue: Math.max(0, contractVal - (Number(workOrderData.totalReceived) || 0)),
         status: workOrderData.status || 'active',
         createdAt: now,
         updatedAt: now,
@@ -231,7 +252,7 @@ export const workOrderStore = {
   },
 
   deleteWorkOrder(id) {
-    const all = this.getWorkOrders().filter((item) => item.id !== id)
+    const all = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS).filter((item) => item.id !== id)
     persist(WO_STORAGE_KEY, all)
     return true
   },
@@ -339,7 +360,7 @@ export const workOrderStore = {
   },
 
   deleteReceipt(id) {
-    const all = this.getReceipts().filter((item) => item.id !== id)
+    const all = this.getReceipts().filter((item) => item.id !== id && item.receiptNumber !== id)
     persist(REC_STORAGE_KEY, all)
     return true
   },
@@ -349,14 +370,48 @@ export const workOrderStore = {
     const receipts = this.getReceipts()
 
     const totalContractValue = workOrders.reduce((sum, wo) => sum + (Number(wo.contractValue) || 0), 0)
+    const totalCoreValue = workOrders.reduce(
+      (sum, wo) =>
+        sum +
+        (Number(wo.coreContractValue) ||
+          Number(wo.contractValue) - (Number(wo.totalAdditionalCharges) || 0)),
+      0,
+    )
+    const totalServerValue = workOrders.reduce((sum, wo) => sum + (Number(wo.serverCharge) || 0), 0)
+    const totalMaintenanceValue = workOrders.reduce(
+      (sum, wo) => sum + (Number(wo.maintenanceCharge) || 0),
+      0,
+    )
+    const totalAdditionalCharges = totalServerValue + totalMaintenanceValue
+
+    const totalAgreedAdvance = workOrders.reduce(
+      (sum, wo) =>
+        sum +
+        (Number(wo.advanceAmount) ||
+          Math.round((Number(wo.contractValue) * (Number(wo.advancePercentage) || 20)) / 100)),
+      0,
+    )
     const totalPaymentsReceived = receipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
     const pendingBalance = Math.max(0, totalContractValue - totalPaymentsReceived)
-    const activeProjectsCount = workOrders.filter((wo) => wo.status === 'active' || wo.status === 'in_progress').length
+    const activeProjectsCount = workOrders.filter(
+      (wo) => wo.status === 'active' || wo.status === 'in_progress',
+    ).length
+    const collectionRate =
+      totalContractValue > 0 ? Math.round((totalPaymentsReceived / totalContractValue) * 100) : 0
+    const advanceRealizationRate =
+      totalAgreedAdvance > 0 ? Math.round((totalPaymentsReceived / totalAgreedAdvance) * 100) : 0
 
     return {
       totalContractValue,
+      totalCoreValue,
+      totalServerValue,
+      totalMaintenanceValue,
+      totalAdditionalCharges,
+      totalAgreedAdvance,
       totalPaymentsReceived,
       pendingBalance,
+      collectionRate,
+      advanceRealizationRate,
       activeProjectsCount,
       workOrdersCount: workOrders.length,
       receiptsCount: receipts.length,

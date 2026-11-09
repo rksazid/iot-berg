@@ -192,20 +192,17 @@ export function WorkOrdersPage() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Work Order Ref</th>
-                <th>Client Company</th>
-                <th>Project Scope</th>
-                <th>Agreed Value</th>
-                <th>Advance Payment</th>
-                <th>Balance Due</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={{ width: '24%' }}>Work Order & Client</th>
+                <th style={{ width: '30%' }}>Project Scope & Services</th>
+                <th style={{ width: '15%' }}>Contract Value</th>
+                <th style={{ width: '15%' }}>Payment Received</th>
+                <th style={{ width: '16%' }}>Status & Balance</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--muted)' }}>
                     No work orders found matching search criteria.
                   </td>
                 </tr>
@@ -213,30 +210,41 @@ export function WorkOrdersPage() {
                 filteredOrders.map((wo) => (
                   <tr key={wo.id}>
                     <td>
-                      <strong className="mono-ref">{wo.id}</strong>
-                      <span className="date-sub">Date: {wo.orderDate}</span>
+                      <div className="table-client-cell">
+                        <strong className="client-title">{wo.clientName}</strong>
+                        <div className="client-meta-line">
+                          <span className="wo-tag">{wo.id}</span>
+                          <span className="dot-sep">·</span>
+                          <span className="date-tag">{wo.orderDate}</span>
+                          {wo.clientContactPerson && (
+                            <>
+                              <span className="dot-sep">·</span>
+                              <span className="contact-tag">{wo.clientContactPerson.split('(')[0].trim()}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td>
-                      <strong>{wo.clientName}</strong>
-                      {wo.clientContactPerson && <span className="client-sub">{wo.clientContactPerson}</span>}
-                      {wo.clientEmail && <span className="date-sub">{wo.clientEmail}</span>}
-                    </td>
+
                     <td>
                       <div className="table-scope-cell">
-                        <strong>{wo.projectName}</strong>
-                        <p>{wo.projectScope}</p>
+                        <strong className="project-title">{wo.projectName}</strong>
+                        <p className="project-desc-clamp" title={wo.projectScope}>
+                          {wo.projectScope}
+                        </p>
                         {wo.totalAdditionalCharges > 0 && (
                           <div className="table-addon-pills">
-                            <span className="addon-scope-pill" title="Operational Service (1 Year)">
+                            <span className="addon-scope-pill" title="1-Year Cloud Hosting">
                               ⚙ Server: {formatCurrencyBDT(wo.serverCharge || 60000)}/yr
                             </span>
-                            <span className="addon-scope-pill" title="Operational Service (1 Year)">
+                            <span className="addon-scope-pill" title="1-Year Software Maintenance & SLA">
                               🛡 Maintenance: {formatCurrencyBDT(wo.maintenanceCharge || 40000)}/yr
                             </span>
                           </div>
                         )}
                       </div>
                     </td>
+
                     <td>
                       <div className="table-contract-col">
                         <strong className="contract-num">{formatCurrencyBDT(wo.contractValue)}</strong>
@@ -248,62 +256,82 @@ export function WorkOrdersPage() {
                         )}
                       </div>
                     </td>
+
                     <td>
-                      <div className="advance-pill-box">
-                        <span className="advance-tag paid">
-                          {formatCurrencyBDT(wo.totalReceived)}
-                        </span>
-                        <span className="advance-percent">({wo.advancePercentage}% Adv)</span>
+                      <div className="payment-status-cell">
+                        {wo.totalReceived > 0 ? (
+                          <>
+                            <span className={`advance-tag ${wo.totalReceived >= wo.contractValue ? 'completed' : 'paid'}`}>
+                              ✓ {formatCurrencyBDT(wo.totalReceived)} Received
+                            </span>
+                            <span className="advance-percent">
+                              {wo.totalReceived >= wo.contractValue
+                                ? '100% Paid in Full'
+                                : `${wo.advancePercentage}% Advance Received`}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="advance-tag unpaid">
+                              Unpaid (৳ 0)
+                            </span>
+                            <span className="advance-percent pending">
+                              Agreed Adv: {formatCurrencyBDT(wo.advanceAmount || Math.round((wo.contractValue * (wo.advancePercentage || 20)) / 100))} ({wo.advancePercentage}%)
+                            </span>
+                          </>
+                        )}
                       </div>
                     </td>
-                    <td>
-                      <span className="balance-due-txt" style={{ color: wo.balanceDue > 0 ? '#f59e0b' : '#0d9488' }}>
-                        {formatCurrencyBDT(wo.balanceDue)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-chip-sm ${wo.status}`}>{wo.status}</span>
-                    </td>
-                    <td>
-                      <div className="action-buttons-inline">
-                        {hasRole(['admin', 'manager']) && (
-                          <Link
-                            to={`/admin/receipts/new?workOrderId=${encodeURIComponent(wo.id)}`}
-                            className="button button-sm button-primary"
-                            title="Issue Payment Receipt for this Work Order"
-                            style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
-                          >
-                            <span>Issue Receipt</span>
-                          </Link>
-                        )}
 
-                        {hasRole(['admin', 'manager']) && (
-                          <button
-                            type="button"
-                            className="table-action-icon-btn"
-                            title="Edit Work Order"
-                            onClick={() => handleOpenEdit(wo)}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                          </button>
-                        )}
+                    <td>
+                      <div className="status-balance-actions-cell">
+                        <div className="status-balance-top">
+                          <span className={`status-chip-sm ${wo.status}`}>{wo.status}</span>
+                          <span className="balance-due-txt" style={{ color: wo.balanceDue > 0 ? '#d97706' : '#059669' }}>
+                            {formatCurrencyBDT(wo.balanceDue)} Due
+                          </span>
+                        </div>
 
-                        {hasRole(['admin']) && (
-                          <button
-                            type="button"
-                            className="table-action-icon-btn danger"
-                            title="Delete Work Order"
-                            onClick={() => handleDelete(wo.id)}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
-                          </button>
-                        )}
+                        <div className="action-buttons-inline" style={{ marginTop: '0.45rem' }}>
+                          {hasRole(['admin', 'manager']) && (
+                            <Link
+                              to={`/admin/receipts/new?workOrderId=${encodeURIComponent(wo.id)}`}
+                              className="button button-sm button-primary"
+                              title="Issue Payment Receipt for this Work Order"
+                              style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
+                            >
+                              <span>Issue Receipt</span>
+                            </Link>
+                          )}
+
+                          {hasRole(['admin', 'manager']) && (
+                            <button
+                              type="button"
+                              className="table-action-icon-btn"
+                              title="Edit Work Order"
+                              onClick={() => handleOpenEdit(wo)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                          )}
+
+                          {hasRole(['admin']) && (
+                            <button
+                              type="button"
+                              className="table-action-icon-btn danger"
+                              title="Delete Work Order"
+                              onClick={() => handleDelete(wo.id)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
