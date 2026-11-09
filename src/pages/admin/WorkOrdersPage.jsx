@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { workOrderStore } from '../../lib/workOrderStore'
 import { formatCurrencyBDT } from '../../lib/numberToWords'
+import { compileReceiptHtml } from '../../lib/receiptPdfCompiler'
+import { generatePdf } from '../../lib/pdfClient'
 import { useAuth } from '../../context/AuthContext'
 
 export function WorkOrdersPage() {
@@ -11,8 +13,10 @@ export function WorkOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingOrder, setEditingOrder] = useState(null)
+  const [selectedWoForPayments, setSelectedWoForPayments] = useState(null)
+  const [downloadingId, setDownloadingId] = useState(null)
 
-  // Form State
+  // Work Order Form State (Strictly Work Order scope — no forced advance fields)
   const [formData, setFormData] = useState({
     id: '',
     clientName: '',
@@ -30,7 +34,6 @@ export function WorkOrdersPage() {
     otherAdditionalCharge: '0',
     otherAdditionalNote: '',
     contractValue: '450000',
-    advancePercentage: '20',
     status: 'active',
     orderDate: new Date().toISOString().split('T')[0],
     deliveryDate: '',
@@ -45,7 +48,12 @@ export function WorkOrdersPage() {
   }, [searchParams])
 
   const loadOrders = () => {
-    setWorkOrders(workOrderStore.getWorkOrders())
+    const orders = workOrderStore.getWorkOrders()
+    setWorkOrders(orders)
+    if (selectedWoForPayments) {
+      const refreshed = orders.find((o) => o.id === selectedWoForPayments.id)
+      setSelectedWoForPayments(refreshed || null)
+    }
   }
 
   const handleOpenCreate = () => {
@@ -67,7 +75,6 @@ export function WorkOrdersPage() {
       otherAdditionalCharge: '0',
       otherAdditionalNote: '',
       contractValue: '450000',
-      advancePercentage: '20',
       status: 'active',
       orderDate: new Date().toISOString().split('T')[0],
       deliveryDate: '',
@@ -78,7 +85,10 @@ export function WorkOrdersPage() {
 
   const handleOpenEdit = (wo) => {
     setEditingOrder(wo)
-    const core = wo.coreContractValue != null ? String(wo.coreContractValue) : String(Math.max(0, (wo.contractValue || 450000) - (wo.totalAdditionalCharges || 100000)))
+    const core =
+      wo.coreContractValue != null
+        ? String(wo.coreContractValue)
+        : String(Math.max(0, (wo.contractValue || 450000) - (wo.totalAdditionalCharges || 100000)))
     setFormData({
       id: wo.id,
       clientName: wo.clientName,
@@ -96,7 +106,6 @@ export function WorkOrdersPage() {
       otherAdditionalCharge: String(wo.otherAdditionalCharge || 0),
       otherAdditionalNote: wo.otherAdditionalNote || '',
       contractValue: String(wo.contractValue),
-      advancePercentage: String(wo.advancePercentage || 20),
       status: wo.status,
       orderDate: wo.orderDate || '',
       deliveryDate: wo.deliveryDate || '',
@@ -110,16 +119,16 @@ export function WorkOrdersPage() {
     (Number(formData.maintenanceCharge) || 0) +
     (Number(formData.otherAdditionalCharge) || 0)
   const calculatedGrandTotal = (Number(formData.coreContractValue) || 0) + calculatedAddons
-  const calculatedAdvanceAmount = Math.round(
-    (calculatedGrandTotal * (Number(formData.advancePercentage) || 0)) / 100,
-  )
 
   const handleSubmit = (e) => {
     e.preventDefault()
     workOrderStore.saveWorkOrder({
       ...formData,
+      coreContractValue: Number(formData.coreContractValue) || 0,
+      serverCharge: Number(formData.serverCharge) || 0,
+      maintenanceCharge: Number(formData.maintenanceCharge) || 0,
+      otherAdditionalCharge: Number(formData.otherAdditionalCharge) || 0,
       contractValue: calculatedGrandTotal,
-      advanceAmount: calculatedAdvanceAmount,
       totalAdditionalCharges: calculatedAddons,
     })
     setShowModal(false)
@@ -131,6 +140,44 @@ export function WorkOrdersPage() {
     if (confirm(`Are you sure you want to delete work order ${id}?`)) {
       workOrderStore.deleteWorkOrder(id)
       loadOrders()
+    }
+  }
+
+  const handleDeleteReceiptFromModal = (receiptId) => {
+    if (confirm(`Are you sure you want to delete payment receipt ${receiptId}?`)) {
+      workOrderStore.deleteReceipt(receiptId)
+      loadOrders()
+    }
+  }
+
+  const handleDownloadPdf = async (receipt) => {
+    setDownloadingId(receipt.id)
+    try {
+      const html = await compileReceiptHtml(receipt, window.location.origin)
+      const res = await generatePdf({
+        endpointMode: 'auto',
+        apiPath: 'html-to-pdf',
+        payload: {
+          html,
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '10mm', right: '12mm', bottom: '10mm', left: '12mm' },
+        },
+      })
+
+      const blobUrl = URL.createObjectURL(res.blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = `Receipt-${receipt.receiptNumber || receipt.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch (err) {
+      console.error('Failed to download PDF:', err)
+      alert(`PDF compilation error: ${err.message}`)
+    } finally {
+      setDownloadingId(null)
     }
   }
 
@@ -151,7 +198,7 @@ export function WorkOrdersPage() {
           <span className="section-label">Client Contracts</span>
           <h2 className="subpage-title">Work Orders</h2>
           <p className="subpage-desc">
-            Manage client engineering contracts, project scopes, and milestone payment terms.
+            Manage authorized client engineering work orders, operational service add-ons, and payment schedules.
           </p>
         </div>
 
@@ -166,7 +213,7 @@ export function WorkOrdersPage() {
         )}
       </div>
 
-      {/* Filter / Search Bar */}
+      {/* Search / Filter Bar */}
       <div className="search-filter-bar glass-panel">
         <div className="search-input-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -186,17 +233,17 @@ export function WorkOrdersPage() {
         </span>
       </div>
 
-      {/* Work Orders List / Table */}
-      <div className="orders-table-card glass-panel">
+      {/* 5-Column Proportional Table */}
+      <div className="work-orders-table-card glass-panel">
         <div className="admin-table-scroller">
           <table className="admin-table">
             <thead>
               <tr>
-                <th style={{ width: '24%' }}>Work Order & Client</th>
+                <th style={{ width: '25%' }}>Work Order & Client</th>
                 <th style={{ width: '30%' }}>Project Scope & Services</th>
                 <th style={{ width: '15%' }}>Contract Value</th>
-                <th style={{ width: '15%' }}>Payment Received</th>
-                <th style={{ width: '16%' }}>Status & Balance</th>
+                <th style={{ width: '16%' }}>Payments Logged</th>
+                <th style={{ width: '14%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -249,58 +296,64 @@ export function WorkOrdersPage() {
                       <div className="table-contract-col">
                         <strong className="contract-num">{formatCurrencyBDT(wo.contractValue)}</strong>
                         {wo.totalAdditionalCharges > 0 && (
-                          <div className="contract-breakdown-sub">
-                            <span className="sub-core">Core: {formatCurrencyBDT(wo.coreContractValue || (wo.contractValue - wo.totalAdditionalCharges))}</span>
-                            <span className="sub-addon">+ {formatCurrencyBDT(wo.totalAdditionalCharges)} Add-ons</span>
-                          </div>
+                          <span className="contract-breakdown-sub">
+                            <span>Core: {formatCurrencyBDT(wo.coreContractValue || wo.contractValue - wo.totalAdditionalCharges)}</span>
+                            <span className="sub-addon">+{formatCurrencyBDT(wo.totalAdditionalCharges)} Add-ons</span>
+                          </span>
                         )}
                       </div>
                     </td>
 
                     <td>
-                      <div className="payment-status-cell">
+                      <div className="table-payment-cell">
                         {wo.totalReceived > 0 ? (
                           <>
-                            <span className={`advance-tag ${wo.totalReceived >= wo.contractValue ? 'completed' : 'paid'}`}>
+                            <span className="advance-tag paid">
                               ✓ {formatCurrencyBDT(wo.totalReceived)} Received
                             </span>
-                            <span className="advance-percent">
-                              {wo.totalReceived >= wo.contractValue
-                                ? '100% Paid in Full'
-                                : `${wo.advancePercentage}% Advance Received`}
+                            <span className="payments-count-txt">
+                              {wo.paymentsCount} {wo.paymentsCount === 1 ? 'payment logged' : 'payments logged'}
+                            </span>
+                            <span
+                              className="balance-due-txt"
+                              style={{ color: wo.balanceDue > 0 ? '#d97706' : '#059669' }}
+                            >
+                              {formatCurrencyBDT(wo.balanceDue)} Due
                             </span>
                           </>
                         ) : (
                           <>
                             <span className="advance-tag unpaid">
-                              Unpaid (৳ 0)
+                              No Payments (৳ 0)
                             </span>
-                            <span className="advance-percent pending">
-                              Agreed Adv: {formatCurrencyBDT(wo.advanceAmount || Math.round((wo.contractValue * (wo.advancePercentage || 20)) / 100))} ({wo.advancePercentage}%)
+                            <span className="balance-due-txt" style={{ color: '#d97706' }}>
+                              Full {formatCurrencyBDT(wo.contractValue)} Due
                             </span>
                           </>
                         )}
+                        <button
+                          type="button"
+                          className="link-payments-btn"
+                          onClick={() => setSelectedWoForPayments(wo)}
+                        >
+                          View Payments ({wo.paymentsCount || 0}) →
+                        </button>
                       </div>
                     </td>
 
                     <td>
                       <div className="status-balance-actions-cell">
-                        <div className="status-balance-top">
-                          <span className={`status-chip-sm ${wo.status}`}>{wo.status}</span>
-                          <span className="balance-due-txt" style={{ color: wo.balanceDue > 0 ? '#d97706' : '#059669' }}>
-                            {formatCurrencyBDT(wo.balanceDue)} Due
-                          </span>
-                        </div>
+                        <span className={`status-chip-sm ${wo.status}`}>{wo.status}</span>
 
                         <div className="action-buttons-inline" style={{ marginTop: '0.45rem' }}>
                           {hasRole(['admin', 'manager']) && (
                             <Link
                               to={`/admin/receipts/new?workOrderId=${encodeURIComponent(wo.id)}`}
                               className="button button-sm button-primary"
-                              title="Issue Payment Receipt for this Work Order"
+                              title="Add Payment / Issue Receipt for this Work Order"
                               style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}
                             >
-                              <span>Issue Receipt</span>
+                              <span>+ Payment</span>
                             </Link>
                           )}
 
@@ -342,27 +395,30 @@ export function WorkOrdersPage() {
         </div>
       </div>
 
-      {/* Modal: Create or Edit Work Order */}
+      {/* MODAL 1: Create / Edit Work Order (Strictly Work Order scope) */}
       {showModal && (
         <div className="modal-backdrop" onClick={() => setShowModal(false)}>
           <div className="modal-dialog glass-panel" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">
-                {editingOrder ? `Edit Work Order ${formData.id}` : 'New Work Order'}
-              </h3>
+              <div>
+                <span className="section-label">Contract Management</span>
+                <h3 className="modal-title">
+                  {editingOrder ? `Edit Work Order (${editingOrder.id})` : 'Record Received Work Order'}
+                </h3>
+              </div>
               <button type="button" className="modal-close-btn" onClick={() => setShowModal(false)}>
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="modal-form">
+            <form onSubmit={handleSubmit} className="modal-body-form">
               <div className="form-row-2col">
                 <div className="form-group">
-                  <label htmlFor="wo-id">Work Order Reference</label>
+                  <label htmlFor="wo-ref">Work Order Reference</label>
                   <input
-                    id="wo-id"
+                    id="wo-ref"
                     type="text"
-                    className="form-input"
+                    className="form-input font-mono"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                     required
@@ -528,7 +584,7 @@ export function WorkOrdersPage() {
                 </div>
               </div>
 
-              {/* Total Financial Summary & Advance */}
+              {/* Total Financial Summary (Work order scope total) */}
               <div className="modal-financial-summary-strip">
                 <div className="summary-item">
                   <span className="summary-item-label">Core Scope:</span>
@@ -545,28 +601,6 @@ export function WorkOrdersPage() {
               </div>
 
               <div className="form-row-2col" style={{ marginTop: '0.75rem' }}>
-                <div className="form-group">
-                  <label htmlFor="adv-pct">Advance Percentage Agreed (%)</label>
-                  <input
-                    id="adv-pct"
-                    type="number"
-                    className="form-input"
-                    placeholder="20"
-                    value={formData.advancePercentage}
-                    onChange={(e) => setFormData({ ...formData, advancePercentage: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Calculated Advance Amount</label>
-                  <div className="form-readonly-val" style={{ color: '#0d9488', fontWeight: 700 }}>
-                    {formatCurrencyBDT(calculatedAdvanceAmount)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-row-2col">
                 <div className="form-group">
                   <label htmlFor="order-date">Work Order Date</label>
                   <input
@@ -591,19 +625,201 @@ export function WorkOrdersPage() {
                 </div>
               </div>
 
-              <div className="modal-actions-row">
+              <div className="form-group">
+                <label htmlFor="notes">Engagement Notes & Terms</label>
+                <textarea
+                  id="notes"
+                  className="form-input textarea"
+                  rows="2"
+                  placeholder="Terms, operational agreements, milestone notes..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+
+              <div className="modal-actions-bar">
                 <button type="button" className="button button-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
                 <button type="submit" className="button button-primary">
-                  <span>{editingOrder ? 'Update Work Order' : 'Save Work Order'}</span>
+                  {editingOrder ? 'Update Work Order' : 'Save Work Order'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* MODAL 2: Work Order Payments History & Actions */}
+      {selectedWoForPayments && (
+        <div className="modal-backdrop" onClick={() => setSelectedWoForPayments(null)}>
+          <div className="modal-dialog modal-dialog-lg glass-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="section-label">Payment Ledger</span>
+                <h3 className="modal-title">
+                  Payments under {selectedWoForPayments.id}
+                </h3>
+                <p className="modal-sub-client">
+                  <strong>{selectedWoForPayments.clientName}</strong> · {selectedWoForPayments.projectName}
+                </p>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={() => setSelectedWoForPayments(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body-content">
+              {/* Financial KPI Summary Bar */}
+              <div className="modal-payment-kpi-bar">
+                <div className="kpi-metric">
+                  <span className="kpi-label">Total Contract Value</span>
+                  <strong className="kpi-val">{formatCurrencyBDT(selectedWoForPayments.contractValue)}</strong>
+                </div>
+                <div className="kpi-metric">
+                  <span className="kpi-label">Total Payments Received</span>
+                  <strong className="kpi-val" style={{ color: '#059669' }}>
+                    {formatCurrencyBDT(selectedWoForPayments.totalReceived)}
+                  </strong>
+                </div>
+                <div className="kpi-metric">
+                  <span className="kpi-label">Remaining Balance</span>
+                  <strong
+                    className="kpi-val"
+                    style={{ color: selectedWoForPayments.balanceDue > 0 ? '#d97706' : '#059669' }}
+                  >
+                    {formatCurrencyBDT(selectedWoForPayments.balanceDue)}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Payments List Table */}
+              {(!selectedWoForPayments.payments || selectedWoForPayments.payments.length === 0) ? (
+                <div className="empty-payments-state">
+                  <p>No payments recorded under this work order yet.</p>
+                  <Link
+                    to={`/admin/receipts/new?workOrderId=${encodeURIComponent(selectedWoForPayments.id)}`}
+                    className="button button-primary"
+                    style={{ display: 'inline-flex', marginTop: '0.5rem' }}
+                  >
+                    <span>+ Add Advance or Milestone Payment</span>
+                  </Link>
+                </div>
+              ) : (
+                <div className="admin-table-scroller" style={{ marginTop: '1rem' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Receipt #</th>
+                        <th>Payment Head</th>
+                        <th>Date & Mode</th>
+                        <th>Particulars / Description</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedWoForPayments.payments.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <strong className="mono-ref">{p.receiptNumber || p.id}</strong>
+                          </td>
+                          <td>
+                            <span className="payment-head-chip">{p.paymentHead || p.paymentCategory}</span>
+                          </td>
+                          <td>
+                            <span className="date-sub">{p.paymentDate || p.receiptDate}</span>
+                            <span className="mode-sub">{p.paymentMode}</span>
+                          </td>
+                          <td>
+                            <p className="payment-desc-clamp" title={p.transactionNote}>
+                              {p.transactionNote || '—'}
+                            </p>
+                          </td>
+                          <td>
+                            <strong style={{ color: '#059669', fontFamily: 'var(--font-mono)' }}>
+                              {formatCurrencyBDT(p.amount)}
+                            </strong>
+                          </td>
+                          <td>
+                            <div className="action-buttons-inline">
+                              <button
+                                type="button"
+                                className="table-action-icon-btn"
+                                title="Download PDF Voucher (pdf-lagbe)"
+                                onClick={() => handleDownloadPdf(p)}
+                                disabled={downloadingId === p.id}
+                              >
+                                {downloadingId === p.id ? (
+                                  <span className="spinner-mini" />
+                                ) : (
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                  </svg>
+                                )}
+                              </button>
+
+                              <Link
+                                to={`/verify/${p.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="table-action-icon-btn"
+                                title="Open Online Verification"
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 14 14" />
+                                </svg>
+                              </Link>
+
+                              {hasRole(['admin']) && (
+                                <button
+                                  type="button"
+                                  className="table-action-icon-btn danger"
+                                  title="Delete Payment"
+                                  onClick={() => handleDeleteReceiptFromModal(p.id)}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions-bar" style={{ marginTop: '1.25rem', justifyContent: 'space-between' }}>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setSelectedWoForPayments(null)}
+              >
+                Close
+              </button>
+
+              <Link
+                to={`/admin/receipts/new?workOrderId=${encodeURIComponent(selectedWoForPayments.id)}`}
+                className="button button-primary"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Add Payment for this Order</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

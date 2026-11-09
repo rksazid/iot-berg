@@ -25,15 +25,11 @@ const INITIAL_WORK_ORDERS = [
     totalAdditionalCharges: 100000,
     contractValue: 450000, // Core (৳350,000) + Additional Operational Services (৳100,000)
     hasAdditionalCharges: true,
-    advancePercentage: 20,
-    advanceAmount: 90000,
-    totalReceived: 90000,
-    balanceDue: 360000,
     status: 'active', // active, in_progress, completed, on_hold
     orderDate: '2026-11-09',
     deliveryDate: '2027-01-30',
     notes:
-      '20% advance payment received in cash upon work order execution. Includes 1-year managed cloud server hosting and 1-year software maintenance support billed as separate operational allocations.',
+      'Client engagement includes 1-year managed cloud server hosting and 1-year software maintenance support billed as separate operational allocations.',
     createdAt: '2026-11-09T10:00:00.000Z',
     updatedAt: '2026-11-09T10:30:00.000Z',
   },
@@ -51,12 +47,13 @@ const INITIAL_RECEIPTS = [
     projectName: 'Enterprise Document Engine & Automated Cloud Pipeline',
     amount: 90000,
     amountInWords: 'Ninety Thousand BDT Only',
-    paymentCategory: '20% Advance Payment on Work Order',
+    paymentHead: 'Advance Payment',
+    paymentCategory: 'Advance Payment',
     paymentMode: 'Cash',
     paymentDate: '2026-11-09',
     receiptDate: '2026-11-09',
     transactionNote:
-      'Official cash advance payment received in full as per Work Order WO-2026-001 milestone schedule.',
+      'Official cash advance payment received in full as per Work Order WO-2026-001 payment schedule.',
     totalContractValue: 450000,
     coreContractValue: 350000,
     serverCharge: 60000,
@@ -64,15 +61,14 @@ const INITIAL_RECEIPTS = [
     maintenanceCharge: 40000,
     maintenancePeriod: '1 Year',
     totalAdditionalCharges: 100000,
-    advancePercent: 20,
     balanceRemaining: 360000,
     signatoryName: 'MD. Rezaul Karim',
     signatoryRole: 'Project Manager & Team Lead',
     signatoryCompany: 'IoT-Berg Engineering',
     signatoryEmail: 'rksazid@gmail.com',
-    signatureUrl: null, // Will render styled SVG digital cryptographic signature or uploaded image
+    signatureUrl: null,
     sealEnabled: true,
-    status: 'verified', // verified, draft, revoked
+    status: 'verified',
     verificationHash: '9a4f8b2c1e7d0356ae29c54f8b190a3d4e7f81b0c3d2e5f6a7b8c9d0e1f2a3b4',
     createdAt: '2026-11-09T10:30:00.000Z',
     updatedAt: '2026-11-09T10:30:00.000Z',
@@ -153,25 +149,23 @@ export const workOrderStore = {
     const receipts = this.getReceipts()
 
     return rawOrders.map((wo) => {
-      // Live compute total payments received strictly from existing active receipts
-      const actualReceived = receipts
-        .filter((r) => r.workOrderId === wo.id && r.status !== 'revoked')
-        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
-
+      // Find all payments linked to this work order
+      const payments = receipts.filter(
+        (r) => r.workOrderId === wo.id && r.status !== 'revoked',
+      )
+      const actualReceived = payments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
       const contractVal = Number(wo.contractValue) || 0
-      const advPct = Number(wo.advancePercentage) || 20
-      const advAmount = Number(wo.advanceAmount) || Math.round((contractVal * advPct) / 100)
       const balanceDue = Math.max(0, contractVal - actualReceived)
 
       return {
         ...wo,
         contractValue: contractVal,
-        advanceAmount: advAmount,
         totalReceived: actualReceived,
         balanceDue,
-        isAdvancePaid: actualReceived >= advAmount && actualReceived > 0,
-        isFullyPaid: actualReceived >= contractVal && contractVal > 0,
+        payments,
+        paymentsCount: payments.length,
         hasPayments: actualReceived > 0,
+        isFullyPaid: actualReceived >= contractVal && contractVal > 0,
       }
     })
   },
@@ -179,6 +173,11 @@ export const workOrderStore = {
   getWorkOrder(id) {
     const all = this.getWorkOrders()
     return all.find((item) => item.id === id) || null
+  },
+
+  getPaymentsForWorkOrder(workOrderId) {
+    const receipts = this.getReceipts()
+    return receipts.filter((r) => r.workOrderId === workOrderId && r.status !== 'revoked')
   },
 
   saveWorkOrder(workOrderData) {
@@ -197,8 +196,6 @@ export const workOrderStore = {
     }
 
     const contractVal = coreVal + totalAdditionalCharges
-    const advPercent = Number(workOrderData.advancePercentage) || 0
-    const calculatedAdv = Math.round((contractVal * advPercent) / 100)
 
     const existingIndex = all.findIndex((item) => item.id === workOrderData.id)
 
@@ -217,8 +214,6 @@ export const workOrderStore = {
         totalAdditionalCharges,
         hasAdditionalCharges: totalAdditionalCharges > 0,
         contractValue: contractVal,
-        advancePercentage: advPercent,
-        advanceAmount: calculatedAdv,
         updatedAt: now,
       }
       all[existingIndex] = savedItem
@@ -238,8 +233,6 @@ export const workOrderStore = {
         totalAdditionalCharges,
         hasAdditionalCharges: totalAdditionalCharges > 0,
         contractValue: contractVal,
-        advancePercentage: advPercent,
-        advanceAmount: calculatedAdv,
         status: workOrderData.status || 'active',
         createdAt: now,
         updatedAt: now,
@@ -274,22 +267,44 @@ export const workOrderStore = {
     const inWords = receiptData.amountInWords || numberToWordsBDT(amountNum)
 
     const linkedWo = receiptData.workOrderId ? this.getWorkOrder(receiptData.workOrderId) : null
-    const coreVal = receiptData.coreContractValue != null
-      ? Number(receiptData.coreContractValue)
-      : (linkedWo?.coreContractValue || 350000)
-    const serverCharge = receiptData.serverCharge != null
-      ? Number(receiptData.serverCharge)
-      : (linkedWo?.serverCharge || 60000)
+    const coreVal =
+      receiptData.coreContractValue != null
+        ? Number(receiptData.coreContractValue)
+        : linkedWo?.coreContractValue || 350000
+    const serverCharge =
+      receiptData.serverCharge != null
+        ? Number(receiptData.serverCharge)
+        : linkedWo?.serverCharge || 60000
     const serverPeriod = receiptData.serverPeriod || linkedWo?.serverPeriod || '1 Year'
-    const maintenanceCharge = receiptData.maintenanceCharge != null
-      ? Number(receiptData.maintenanceCharge)
-      : (linkedWo?.maintenanceCharge || 40000)
-    const maintenancePeriod = receiptData.maintenancePeriod || linkedWo?.maintenancePeriod || '1 Year'
-    const totalAdditionalCharges = serverCharge + maintenanceCharge + (Number(receiptData.otherAdditionalCharge) || 0)
+    const maintenanceCharge =
+      receiptData.maintenanceCharge != null
+        ? Number(receiptData.maintenanceCharge)
+        : linkedWo?.maintenanceCharge || 40000
+    const maintenancePeriod =
+      receiptData.maintenancePeriod || linkedWo?.maintenancePeriod || '1 Year'
+    const totalAdditionalCharges =
+      serverCharge + maintenanceCharge + (Number(receiptData.otherAdditionalCharge) || 0)
     const totalContractValue = receiptData.totalContractValue
       ? Number(receiptData.totalContractValue)
-      : (coreVal + totalAdditionalCharges)
-    const balanceRemaining = Math.max(0, totalContractValue - amountNum)
+      : coreVal + totalAdditionalCharges
+
+    // Compute previous payments for this work order to calculate correct remaining balance
+    const otherReceiptsForWo = linkedWo
+      ? all.filter(
+          (r) =>
+            r.workOrderId === linkedWo.id &&
+            r.id !== receiptData.id &&
+            r.status !== 'revoked',
+        )
+      : []
+    const previouslyReceived = otherReceiptsForWo.reduce(
+      (sum, r) => sum + (Number(r.amount) || 0),
+      0,
+    )
+    const balanceRemaining = Math.max(0, totalContractValue - (previouslyReceived + amountNum))
+
+    const paymentHead =
+      receiptData.paymentHead || receiptData.paymentCategory || 'Project Payment'
 
     const existingIndex = all.findIndex((item) => item.id === receiptData.id)
 
@@ -298,6 +313,8 @@ export const workOrderStore = {
       savedItem = {
         ...all[existingIndex],
         ...receiptData,
+        paymentHead,
+        paymentCategory: paymentHead,
         coreContractValue: coreVal,
         serverCharge,
         serverPeriod,
@@ -324,6 +341,8 @@ export const workOrderStore = {
         ...receiptData,
         id: generatedId,
         receiptNumber: generatedId,
+        paymentHead,
+        paymentCategory: paymentHead,
         coreContractValue: coreVal,
         serverCharge,
         serverPeriod,
@@ -340,19 +359,6 @@ export const workOrderStore = {
         updatedAt: now,
       }
       all.unshift(savedItem)
-
-      // Update linked work order's totalReceived if applicable
-      if (savedItem.workOrderId) {
-        const wo = this.getWorkOrder(savedItem.workOrderId)
-        if (wo) {
-          const newTotalReceived = (Number(wo.totalReceived) || 0) + amountNum
-          this.saveWorkOrder({
-            ...wo,
-            totalReceived: newTotalReceived,
-            balanceDue: Math.max(0, wo.contractValue - newTotalReceived),
-          })
-        }
-      }
     }
 
     persist(REC_STORAGE_KEY, all)
@@ -369,7 +375,10 @@ export const workOrderStore = {
     const workOrders = this.getWorkOrders()
     const receipts = this.getReceipts()
 
-    const totalContractValue = workOrders.reduce((sum, wo) => sum + (Number(wo.contractValue) || 0), 0)
+    const totalContractValue = workOrders.reduce(
+      (sum, wo) => sum + (Number(wo.contractValue) || 0),
+      0,
+    )
     const totalCoreValue = workOrders.reduce(
       (sum, wo) =>
         sum +
@@ -384,13 +393,6 @@ export const workOrderStore = {
     )
     const totalAdditionalCharges = totalServerValue + totalMaintenanceValue
 
-    const totalAgreedAdvance = workOrders.reduce(
-      (sum, wo) =>
-        sum +
-        (Number(wo.advanceAmount) ||
-          Math.round((Number(wo.contractValue) * (Number(wo.advancePercentage) || 20)) / 100)),
-      0,
-    )
     const totalPaymentsReceived = receipts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
     const pendingBalance = Math.max(0, totalContractValue - totalPaymentsReceived)
     const activeProjectsCount = workOrders.filter(
@@ -398,8 +400,6 @@ export const workOrderStore = {
     ).length
     const collectionRate =
       totalContractValue > 0 ? Math.round((totalPaymentsReceived / totalContractValue) * 100) : 0
-    const advanceRealizationRate =
-      totalAgreedAdvance > 0 ? Math.round((totalPaymentsReceived / totalAgreedAdvance) * 100) : 0
 
     return {
       totalContractValue,
@@ -407,15 +407,12 @@ export const workOrderStore = {
       totalServerValue,
       totalMaintenanceValue,
       totalAdditionalCharges,
-      totalAgreedAdvance,
       totalPaymentsReceived,
       pendingBalance,
       collectionRate,
-      advanceRealizationRate,
       activeProjectsCount,
       workOrdersCount: workOrders.length,
       receiptsCount: receipts.length,
     }
   },
 }
-

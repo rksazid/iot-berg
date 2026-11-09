@@ -185,8 +185,8 @@ export function ReceiptsPage() {
                       <strong className="amount-num-cell" style={{ color: '#0d9488' }}>
                         {formatCurrencyBDT(rec.amount)}
                       </strong>
-                      <span className="advance-tag paid" style={{ marginTop: '2px' }}>
-                        {rec.advancePercent || 20}% Adv
+                      <span className="payment-head-chip" style={{ marginTop: '2px', display: 'inline-block' }}>
+                        {rec.paymentHead || rec.paymentCategory || 'Payment Voucher'}
                       </span>
                     </td>
                     <td>

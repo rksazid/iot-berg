@@ -120,7 +120,7 @@ export function AdminDashboardPage() {
             </svg>
           </div>
           <div className="stat-card-data">
-            <span className="stat-label">Advance Received</span>
+            <span className="stat-label">Payments Received</span>
             <strong
               className="stat-value"
               style={{ color: stats.totalPaymentsReceived > 0 ? '#0d9488' : '#d97706' }}
@@ -129,8 +129,8 @@ export function AdminDashboardPage() {
             </strong>
             <span className="stat-subtext">
               {stats.totalPaymentsReceived > 0
-                ? `${stats.advanceRealizationRate}% of target advance`
-                : 'Pending advance receipt'}
+                ? `${stats.collectionRate}% of total contracts collected`
+                : 'No payments recorded yet'}
             </span>
           </div>
         </div>
@@ -255,16 +255,16 @@ export function AdminDashboardPage() {
           {/* Cash Realization Sub-bar */}
           <div className="realization-footer">
             <div className="realization-labels">
-              <span>Advance Cash Realization ({stats.advanceRealizationRate}%)</span>
+              <span>Overall Revenue Realization ({stats.collectionRate}%)</span>
               <span>
-                {formatCurrencyBDT(stats.totalPaymentsReceived)} / {formatCurrencyBDT(stats.totalAgreedAdvance)}
+                {formatCurrencyBDT(stats.totalPaymentsReceived)} / {formatCurrencyBDT(stats.totalContractValue)}
               </span>
             </div>
             <div className="mini-progress-track">
               <div
                 className="mini-progress-fill"
                 style={{
-                  width: `${Math.min(100, stats.advanceRealizationRate)}%`,
+                  width: `${Math.min(100, stats.collectionRate)}%`,
                   backgroundColor: stats.totalPaymentsReceived > 0 ? '#10b981' : '#f59e0b',
                 }}
               />
@@ -404,16 +404,16 @@ export function AdminDashboardPage() {
                               ✓ {formatCurrencyBDT(wo.totalReceived)}
                             </span>
                             <span className="advance-percent">
-                              {Math.round((wo.totalReceived / wo.contractValue) * 100)}% Received
+                              {wo.paymentsCount || 1} {wo.paymentsCount === 1 ? 'payment' : 'payments'} · {formatCurrencyBDT(wo.balanceDue)} Due
                             </span>
                           </div>
                         ) : (
                           <div className="table-payment-cell">
                             <span className="advance-tag unpaid">
-                              Unpaid (৳ 0)
+                              No Payments (৳ 0)
                             </span>
                             <span className="advance-percent pending">
-                              Adv: {formatCurrencyBDT(wo.advanceAmount)} ({wo.advancePercentage}%)
+                              Balance: {formatCurrencyBDT(wo.contractValue)} Due
                             </span>
                           </div>
                         )}
@@ -498,7 +498,7 @@ export function AdminDashboardPage() {
                         <span className="client-sub" style={{ fontWeight: 600, color: 'var(--text)' }}>
                           {rec.clientName}
                         </span>
-                        <span className="mode-sub">{rec.paymentMode} Receipt</span>
+                        <span className="mode-sub">{rec.paymentHead || rec.paymentCategory || `${rec.paymentMode} Receipt`}</span>
                       </td>
                       <td>
                         <strong style={{ color: '#0d9488' }}>{formatCurrencyBDT(rec.amount)}</strong>

@@ -155,7 +155,7 @@ export function VerifyReceiptPage() {
               </div>
               <div className="payment-mode-box">
                 <span className="payment-mode-badge">{receipt.paymentMode} Payment</span>
-                <span className="payment-adv-note">{receipt.advancePercent || 20}% Advance Paid</span>
+                <span className="payment-adv-note">{receipt.paymentHead || receipt.paymentCategory || 'Verified Payment'}</span>
               </div>
             </div>
 

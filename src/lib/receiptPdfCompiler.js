@@ -384,7 +384,7 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       </div>
       <div class="amount-right">
         <div class="payment-mode-pill">${receipt.paymentMode || 'Cash'} Receipt</div>
-        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Advance: ${receipt.advancePercent || 20}%</div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">${receipt.paymentHead || receipt.paymentCategory || 'Payment Voucher'}</div>
       </div>
     </div>
 
@@ -472,7 +472,7 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
               ${receipt.transactionNote || 'Advance payment received in cash for project commencement.'}
             </span>
           </td>
-          <td>${receipt.paymentMode || 'Cash'} · ${receipt.advancePercent || 20}% Advance</td>
+          <td>${receipt.paymentMode || 'Cash'} · ${receipt.paymentHead || receipt.paymentCategory || 'Project Payment'}</td>
           <td style="text-align: right; font-weight: 700; font-family: monospace; font-size: 13px;">
             ${formattedAmount}
           </td>
