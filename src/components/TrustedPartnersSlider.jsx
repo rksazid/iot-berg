@@ -192,3 +192,4 @@ export function TrustedPartnersSlider() {
     </section>
   )
 }
+

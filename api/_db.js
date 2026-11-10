@@ -193,3 +193,4 @@ export async function seedNeonIfEmpty({ workOrders = [], receipts = [], partners
   for (const p of partners) await upsertPartnerNeon(p)
   return await readAllFromNeon()
 }
+
