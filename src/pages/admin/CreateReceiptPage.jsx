@@ -1074,11 +1074,20 @@ export function CreateReceiptPage() {
 
           <div className="mini-receipt-card">
             <div className="mini-brand-row">
-              <div>
-                <strong className="mini-brand-name">IoT-Berg</strong>
-                <span className="mini-brand-sub">
-                  Official Money Receipt · {existingReceiptNumber || editId || 'Draft'}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <img
+                  src="/icons/app-icon.png"
+                  alt="IoT-Berg Logo"
+                  width="32"
+                  height="32"
+                  style={{ borderRadius: '8px', border: '1px solid var(--stroke)', flexShrink: 0 }}
+                />
+                <div>
+                  <strong className="mini-brand-name">IoT-Berg</strong>
+                  <span className="mini-brand-sub" style={{ display: 'block' }}>
+                    Official Money Receipt · {existingReceiptNumber || editId || 'Draft'}
+                  </span>
+                </div>
               </div>
               <div className="mini-qr-box">
                 {previewQr && <img src={previewQr} alt="QR" className="mini-qr-img" />}

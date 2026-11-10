@@ -102,13 +102,20 @@ export function VerifyReceiptPage() {
     return (
       <div className="page verify-page">
         <div className="verify-container glass-panel" style={{ maxWidth: '580px', margin: '2rem auto', padding: '2.5rem 2rem', textAlign: 'center' }}>
-          <div className="verified-shield-icon" style={{ margin: '0 auto 1rem' }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <polyline points="9 12 11 14 15 10" />
-            </svg>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.1rem', padding: '0.45rem 0.9rem', background: 'var(--surface-2)', border: '1px solid var(--stroke)', borderRadius: '12px' }}>
+            <img
+              src="/icons/app-icon.png"
+              alt="IoT-Berg Logo"
+              width="32"
+              height="32"
+              style={{ borderRadius: '8px' }}
+            />
+            <div style={{ textAlign: 'left' }}>
+              <strong style={{ display: 'block', fontSize: '0.95rem', letterSpacing: '0.02em', color: 'var(--text)' }}>IoT-BERG</strong>
+              <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Engineering Registry</span>
+            </div>
           </div>
-          <span className="verify-kicker">IoT-Berg Online Verification Registry</span>
+          <span className="verify-kicker" style={{ display: 'block' }}>IoT-Berg Online Verification Registry</span>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 700, margin: '0.35rem 0 0.65rem' }}>
             Verify Official Money Receipt
           </h1>
@@ -260,10 +267,47 @@ export function VerifyReceiptPage() {
         {/* Receipt Content Card */}
         <div className="verify-main-grid">
           <section className="receipt-view-card glass-panel">
-            {/* Top Row: Client & Work Order */}
-            <div className="receipt-view-header">
+            {/* Issuing Company Brand Strip */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                paddingBottom: '1rem',
+                marginBottom: '1rem',
+                borderBottom: '2px solid #0f766e',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <img
+                  src="/icons/app-icon.png"
+                  alt="IoT-Berg Logo"
+                  width="44"
+                  height="44"
+                  style={{ borderRadius: '10px', border: '1px solid var(--stroke)', flexShrink: 0 }}
+                />
+                <div>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', fontWeight: 800, color: '#0f766e', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                    IoT-BERG
+                  </strong>
+                  <span style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '2px' }}>
+                    {receipt.signatoryCompany || 'IoT-Berg Engineering'} · Web · Cloud · APIs
+                  </span>
+                </div>
+              </div>
+
+              <div className="receipt-number-box">
+                <span className="receipt-num-label">Official Payment Receipt</span>
+                <span className="receipt-num-val">{receipt.receiptNumber || receipt.id}</span>
+              </div>
+            </div>
+
+            {/* Top Row: Client Context */}
+            <div className="receipt-view-header" style={{ paddingTop: 0, borderBottom: 'none', marginBottom: '0.75rem' }}>
               <div className="receipt-header-left">
-                <span className="receipt-sublabel">Payment Issued By</span>
+                <span className="receipt-sublabel">Received From (Client)</span>
                 <h2 className="receipt-client-title">{receipt.clientName}</h2>
                 {receipt.clientContactPerson && (
                   <p className="receipt-client-contact">Attn: {receipt.clientContactPerson}</p>
@@ -271,13 +315,6 @@ export function VerifyReceiptPage() {
                 {receipt.clientEmail && (
                   <p className="receipt-client-contact">{receipt.clientEmail}</p>
                 )}
-              </div>
-
-              <div className="receipt-header-right">
-                <div className="receipt-number-box">
-                  <span className="receipt-num-label">Official Payment Receipt</span>
-                  <span className="receipt-num-val">{receipt.receiptNumber || receipt.id}</span>
-                </div>
               </div>
             </div>
 

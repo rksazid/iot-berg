@@ -31,17 +31,18 @@ function escapeHtml(str) {
 }
 
 /**
- * Converts a remote signature URL (e.g. Vercel Blob) into an inline data: URI
- * so headless Chromium in pdf-lagbe renders the signature immediately with zero
- * network fetch race conditions.
+ * Converts a remote image URL (Vercel Blob signature or company logo) into an inline data: URI
+ * so headless Chromium in pdf-lagbe renders images immediately with zero network fetch race conditions.
  */
-async function resolveSignatureDataUri(signatureUrl, signatureDataUrl) {
-  if (signatureUrl && /^data:image\//i.test(signatureUrl)) {
-    return signatureUrl
+async function resolveImageDataUri(imageUrl, fallbackDataUrl = '', secondaryRemoteUrl = '') {
+  if (imageUrl && /^data:image\//i.test(imageUrl)) {
+    return imageUrl
   }
-  if (signatureUrl && /^https?:\/\//i.test(signatureUrl)) {
+
+  const urlsToTry = [imageUrl, secondaryRemoteUrl].filter((u) => u && /^https?:\/\//i.test(u))
+  for (const url of urlsToTry) {
     try {
-      const response = await fetch(signatureUrl)
+      const response = await fetch(url)
       if (response.ok) {
         const mime = response.headers.get('content-type') || 'image/png'
         if (typeof Buffer !== 'undefined') {
@@ -52,7 +53,7 @@ async function resolveSignatureDataUri(signatureUrl, signatureDataUrl) {
         const dataUri = await new Promise((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result)
-          reader.onerror = () => reject(new Error('Failed to read signature blob'))
+          reader.onerror = () => reject(new Error('Failed to read image blob'))
           reader.readAsDataURL(blob)
         })
         if (typeof dataUri === 'string' && dataUri.startsWith('data:')) {
@@ -60,13 +61,14 @@ async function resolveSignatureDataUri(signatureUrl, signatureDataUrl) {
         }
       }
     } catch (err) {
-      console.warn('Signature inline conversion fallback:', err.message)
+      console.warn('Image inline conversion fallback:', err.message)
     }
   }
-  if (signatureDataUrl && /^data:image\//i.test(signatureDataUrl)) {
-    return signatureDataUrl
+
+  if (fallbackDataUrl && /^data:image\//i.test(fallbackDataUrl)) {
+    return fallbackDataUrl
   }
-  return signatureUrl || ''
+  return imageUrl || ''
 }
 
 /**
@@ -76,9 +78,11 @@ async function resolveSignatureDataUri(signatureUrl, signatureDataUrl) {
 export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.vercel.app') {
   const receiptRef = receipt.receiptNumber || receipt.id
   const verifyUrl = `${origin}/verify/${encodeURIComponent(receiptRef)}`
-  const [qrDataUrl, resolvedSignatureSrc] = await Promise.all([
+  const logoUrl = receipt.companyLogoUrl || `${origin}/icons/icon-192.png`
+  const [qrDataUrl, resolvedSignatureSrc, resolvedLogoSrc] = await Promise.all([
     generateQrDataUrl(verifyUrl, { width: 150, margin: 1 }),
-    resolveSignatureDataUri(receipt.signatureUrl, receipt.signatureDataUrl),
+    resolveImageDataUri(receipt.signatureUrl, receipt.signatureDataUrl),
+    resolveImageDataUri(logoUrl, '', 'https://iot-berg.vercel.app/icons/icon-192.png'),
   ])
 
   const formattedAmount = formatPdfBDT(receipt.amount)
@@ -180,10 +184,23 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     .brand-col {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
+    }
+    .brand-header-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .company-logo-img {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #cbd5e1;
+      flex-shrink: 0;
     }
     .company-title {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 800;
       color: #0f766e;
       letter-spacing: -0.4px;
@@ -191,11 +208,12 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       line-height: 1.1;
     }
     .company-subtitle {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 700;
       color: #475569;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.7px;
+      margin-top: 1px;
     }
     .company-contact {
       font-size: 10px;
@@ -520,8 +538,13 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     <!-- Top Header -->
     <div class="top-banner">
       <div class="brand-col">
-        <h1 class="company-title">IoT-Berg</h1>
-        <div class="company-subtitle">Engineering · Developer APIs · Cloud Systems</div>
+        <div class="brand-header-row">
+          ${resolvedLogoSrc ? `<img src="${resolvedLogoSrc}" alt="IoT-Berg Logo" class="company-logo-img">` : ''}
+          <div>
+            <h1 class="company-title">IoT-Berg</h1>
+            <div class="company-subtitle">${escapeHtml(receipt.signatoryCompany || 'IoT-Berg Engineering')} · Web · Cloud · APIs</div>
+          </div>
+        </div>
         <div class="company-contact">
           Technical Direction: MD. Rezaul Karim (${signatoryRoleSafe})<br>
           Web: https://iot-berg.vercel.app · Contact: ${escapeHtml(receipt.signatoryEmail || 'rksazid@gmail.com')}
