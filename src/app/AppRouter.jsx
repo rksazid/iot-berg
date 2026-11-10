@@ -42,6 +42,8 @@ export function AppRouter() {
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="receipts" element={<ReceiptsPage />} />
         <Route path="receipts/new" element={<CreateReceiptPage />} />
+        <Route path="receipts/:receiptId/edit" element={<CreateReceiptPage />} />
+        <Route path="receipts/edit/:receiptId" element={<CreateReceiptPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

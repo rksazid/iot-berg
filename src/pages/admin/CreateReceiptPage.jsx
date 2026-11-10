@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, useParams, Link } from 'react-router-dom'
 import { workOrderStore } from '../../lib/workOrderStore'
 import { numberToWordsBDT, formatCurrencyBDT } from '../../lib/numberToWords'
 import { optimizeImage } from '../../lib/imageOptimizer'
@@ -19,20 +19,27 @@ const PRESET_PAYMENT_HEADS = [
 export function CreateReceiptPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { receiptId: routeReceiptId } = useParams()
   const { currentUser } = useAuth()
+
+  const editId = routeReceiptId || searchParams.get('edit') || null
+  const isEditMode = Boolean(editId)
 
   const workOrders = workOrderStore.getWorkOrders()
   const preselectedWoId = searchParams.get('workOrderId') || (workOrders[0]?.id || '')
 
   const [selectedWoId, setSelectedWoId] = useState(preselectedWoId)
   const [selectedWo, setSelectedWo] = useState(null)
+  const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false)
+  const [existingReceiptNumber, setExistingReceiptNumber] = useState('')
+  const [receiptStatus, setReceiptStatus] = useState('pending_approval')
 
   // Payment Particulars
   const [paymentHead, setPaymentHead] = useState('Advance Payment')
   const [amount, setAmount] = useState('90000')
-  const [percentHelper, setPercentHelper] = useState('20')
+  const [percentHelper, setPercentHelper] = useState('18.8')
   const [paymentMode, setPaymentMode] = useState('Cash')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState('2026-11-08')
   const [transactionNote, setTransactionNote] = useState('')
 
   // Client & Work Order Context
@@ -41,15 +48,15 @@ export function CreateReceiptPage() {
   const [clientEmail, setClientEmail] = useState('')
   const [clientAddress, setClientAddress] = useState('')
   const [projectName, setProjectName] = useState('')
-  const [totalContractValue, setTotalContractValue] = useState(450000)
-  const [coreContractValue, setCoreContractValue] = useState(350000)
-  const [serverCharge, setServerCharge] = useState(60000)
+  const [totalContractValue, setTotalContractValue] = useState(480000)
+  const [coreContractValue, setCoreContractValue] = useState(450000)
+  const [serverCharge, setServerCharge] = useState(30000)
   const [serverPeriod, setServerPeriod] = useState('1 Year')
-  const [maintenanceCharge, setMaintenanceCharge] = useState(40000)
+  const [maintenanceCharge, setMaintenanceCharge] = useState(0)
   const [maintenancePeriod, setMaintenancePeriod] = useState('1 Year')
-  const [totalAdditionalCharges, setTotalAdditionalCharges] = useState(100000)
+  const [totalAdditionalCharges, setTotalAdditionalCharges] = useState(30000)
   const [previouslyReceived, setPreviouslyReceived] = useState(0)
-  const [currentBalanceDue, setCurrentBalanceDue] = useState(450000)
+  const [currentBalanceDue, setCurrentBalanceDue] = useState(480000)
 
   // Signatory
   const [signatoryName, setSignatoryName] = useState('MD. Rezaul Karim')
@@ -68,54 +75,100 @@ export function CreateReceiptPage() {
   // QR Preview
   const [previewQr, setPreviewQr] = useState('')
 
+  // Load existing receipt if editing
+  useEffect(() => {
+    if (editId) {
+      const existing = workOrderStore.getReceipt(editId)
+      if (existing) {
+        setExistingReceiptNumber(existing.receiptNumber || existing.id)
+        setSelectedWoId(existing.workOrderId || '')
+        setPaymentHead(existing.paymentHead || existing.paymentCategory || 'Advance Payment')
+        setAmount(String(existing.amount || ''))
+        setPaymentMode(existing.paymentMode || 'Cash')
+        setPaymentDate(existing.paymentDate || existing.receiptDate || new Date().toISOString().split('T')[0])
+        setTransactionNote(existing.transactionNote || '')
+        setClientName(existing.clientName || '')
+        setClientContactPerson(existing.clientContactPerson || '')
+        setClientEmail(existing.clientEmail || '')
+        setClientAddress(existing.clientAddress || '')
+        setProjectName(existing.projectName || '')
+        const totVal = Number(existing.totalContractValue) || 480000
+        setTotalContractValue(totVal)
+        setCoreContractValue(existing.coreContractValue || 450000)
+        setServerCharge(existing.serverCharge != null ? existing.serverCharge : 30000)
+        setServerPeriod(existing.serverPeriod || '1 Year')
+        setMaintenanceCharge(existing.maintenanceCharge != null ? existing.maintenanceCharge : 0)
+        setMaintenancePeriod(existing.maintenancePeriod || '1 Year')
+        setTotalAdditionalCharges(existing.totalAdditionalCharges || 30000)
+        setSignatoryName(existing.signatoryName || 'MD. Rezaul Karim')
+        setSignatoryRole(existing.signatoryRole || 'Project Manager & Team Lead')
+        setSignatureUrl(existing.signatureUrl || '')
+        setReceiptStatus(existing.status || 'pending_approval')
+        if (totVal > 0 && existing.amount) {
+          setPercentHelper(((Number(existing.amount) / totVal) * 100).toFixed(1))
+        }
+      }
+    }
+    setIsLoadedFromStorage(true)
+  }, [editId])
+
   // Populate context from selected Work Order
   useEffect(() => {
+    if (!isLoadedFromStorage) return
     if (selectedWoId) {
       const wo = workOrderStore.getWorkOrder(selectedWoId)
       if (wo) {
         setSelectedWo(wo)
-        setClientName(wo.clientName)
-        setClientContactPerson(wo.clientContactPerson || '')
-        setClientEmail(wo.clientEmail || '')
-        setClientAddress(wo.clientAddress || '')
-        setProjectName(wo.projectName)
-        setTotalContractValue(wo.contractValue)
-        setCoreContractValue(
-          wo.coreContractValue || wo.contractValue - (wo.totalAdditionalCharges || 100000),
-        )
-        setServerCharge(wo.serverCharge != null ? wo.serverCharge : 60000)
-        setServerPeriod(wo.serverPeriod || '1 Year')
-        setMaintenanceCharge(wo.maintenanceCharge != null ? wo.maintenanceCharge : 40000)
-        setMaintenancePeriod(wo.maintenancePeriod || '1 Year')
-        setTotalAdditionalCharges(wo.totalAdditionalCharges || 100000)
+        // If creating new OR switching work orders manually, sync WO defaults
+        if (!isEditMode) {
+          setClientName(wo.clientName)
+          setClientContactPerson(wo.clientContactPerson || '')
+          setClientEmail(wo.clientEmail || '')
+          setClientAddress(wo.clientAddress || '')
+          setProjectName(wo.projectName)
+          setTotalContractValue(wo.contractValue)
+          setCoreContractValue(
+            wo.coreContractValue || wo.contractValue - (wo.totalAdditionalCharges || 30000),
+          )
+          setServerCharge(wo.serverCharge != null ? wo.serverCharge : 30000)
+          setServerPeriod(wo.serverPeriod || '1 Year')
+          setMaintenanceCharge(wo.maintenanceCharge != null ? wo.maintenanceCharge : 0)
+          setMaintenancePeriod(wo.maintenancePeriod || '1 Year')
+          setTotalAdditionalCharges(wo.totalAdditionalCharges || 30000)
+        }
 
-        // Existing payments under this work order
-        const existingPayments = wo.payments || []
+        // Existing payments under this work order (excluding current edited receipt)
+        const existingPayments = (wo.payments || []).filter(
+          (r) => !editId || (r.id !== editId && r.receiptNumber !== editId),
+        )
         const prevRec = existingPayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
         setPreviouslyReceived(prevRec)
         const due = Math.max(0, wo.contractValue - prevRec)
         setCurrentBalanceDue(due)
 
-        // Default initial payment setup:
-        // If no prior payments, recommend a standard 20% advance or remaining balance
-        const defaultAmt = prevRec === 0 ? Math.round(wo.contractValue * 0.2) : due
-        setAmount(String(defaultAmt))
-        setPercentHelper(wo.contractValue > 0 ? String(Math.round((defaultAmt / wo.contractValue) * 100)) : '')
-        setTransactionNote(
-          `Received ${formatCurrencyBDT(defaultAmt)} via ${paymentMode.toLowerCase()} against Work Order ${wo.id} (${paymentHead}).`,
-        )
+        if (!isEditMode) {
+          const defaultAmt = prevRec === 0 ? 90000 : due
+          setAmount(String(defaultAmt))
+          setPercentHelper(
+            wo.contractValue > 0 ? ((defaultAmt / wo.contractValue) * 100).toFixed(1) : '',
+          )
+          setTransactionNote(
+            `Received ${formatCurrencyBDT(defaultAmt)} via ${paymentMode.toLowerCase()} against Work Order ${wo.workOrderRef || wo.id} (${paymentHead}).`,
+          )
+        }
       }
     } else {
       setSelectedWo(null)
       setPreviouslyReceived(0)
       setCurrentBalanceDue(totalContractValue)
     }
-  }, [selectedWoId])
+  }, [selectedWoId, isLoadedFromStorage])
 
   useEffect(() => {
-    const previewUrl = `${window.location.origin}/verify/IB-REC-PREVIEW`
+    const targetId = existingReceiptNumber || editId || 'IB-REC-PREVIEW'
+    const previewUrl = `${window.location.origin}/verify/${encodeURIComponent(targetId)}`
     generateQrDataUrl(previewUrl, { width: 120, margin: 1 }).then(setPreviewQr)
-  }, [])
+  }, [editId, existingReceiptNumber])
 
   // Amount in words
   const amountNum = Number(amount) || 0
@@ -333,13 +386,14 @@ export function CreateReceiptPage() {
     setSignatureUrl('')
   }
 
-  // Handle Form Submit
-  const handleCreateReceipt = async (e) => {
-    e.preventDefault()
+  // Handle Form Submit (Create or Edit, Approve or Save Draft)
+  const handleSaveReceipt = async (e, targetStatus = 'verified') => {
+    if (e && e.preventDefault) e.preventDefault()
     setIsSaving(true)
 
     try {
-      const newReceipt = workOrderStore.saveReceipt({
+      const savedReceipt = workOrderStore.saveReceipt({
+        ...(isEditMode ? { id: editId, receiptNumber: existingReceiptNumber || editId } : {}),
         workOrderId: selectedWoId,
         clientName,
         clientContactPerson,
@@ -368,13 +422,17 @@ export function CreateReceiptPage() {
         signatoryEmail: currentUser?.email || 'rksazid@gmail.com',
         signatureUrl: signatureUrl || null,
         sealEnabled: true,
-        status: 'verified',
+        status: targetStatus,
       })
 
-      navigate(`/admin/receipts?issued=${encodeURIComponent(newReceipt.id)}`)
+      if (targetStatus === 'verified') {
+        navigate(`/admin/receipts?${isEditMode ? 'approved' : 'issued'}=${encodeURIComponent(savedReceipt.id)}`)
+      } else {
+        navigate(`/admin/receipts?saved=${encodeURIComponent(savedReceipt.id)}`)
+      }
     } catch (err) {
-      console.error('Failed to issue receipt:', err)
-      alert(`Receipt issuance failed: ${err.message}`)
+      console.error('Failed to save receipt:', err)
+      alert(`Receipt action failed: ${err.message}`)
     } finally {
       setIsSaving(false)
     }
@@ -385,17 +443,77 @@ export function CreateReceiptPage() {
       {/* Header */}
       <div className="subpage-header glass-panel">
         <div className="subpage-copy">
-          <span className="section-label">Payment & Receipt Issuer</span>
-          <h2 className="subpage-title">Record Payment & Issue Receipt</h2>
+          <span className="section-label">
+            {isEditMode ? 'Verify, Edit & Approve Payment Receipt' : 'Payment & Receipt Issuer'}
+          </span>
+          <h2 className="subpage-title">
+            {isEditMode
+              ? `Edit & Review Receipt ${existingReceiptNumber || editId}`
+              : 'Record Payment & Issue Receipt'}
+          </h2>
           <p className="subpage-desc">
-            Record advance or milestone payments under an authorized work order with online QR verification and instant PDF generation.
+            {isEditMode
+              ? 'Verify contract and payment details below, upload your authorized signature image, and approve the receipt.'
+              : 'Record advance or milestone payments under an authorized work order with online QR verification and instant PDF generation.'}
           </p>
+        </div>
+        <div className="subpage-actions">
+          <Link to="/admin/receipts" className="button button-secondary">
+            ← Back to Receipts
+          </Link>
         </div>
       </div>
 
+      {isEditMode && (
+        <div
+          className="review-mode-banner glass-panel"
+          style={
+            receiptStatus === 'verified'
+              ? {
+                  background: 'linear-gradient(135deg, rgba(209, 250, 229, 0.7), rgba(167, 243, 208, 0.4))',
+                  borderColor: '#6ee7b7',
+                }
+              : {}
+          }
+        >
+          <div
+            className="banner-icon"
+            style={
+              receiptStatus === 'verified'
+                ? { background: '#d1fae5', borderColor: '#6ee7b7', color: '#059669' }
+                : {}
+            }
+          >
+            {receiptStatus === 'verified' ? '✓' : '⏳'}
+          </div>
+          <div className="banner-content" style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <strong
+                style={{
+                  fontSize: '0.95rem',
+                  color: receiptStatus === 'verified' ? '#065f46' : '#92400e',
+                }}
+              >
+                {receiptStatus === 'verified'
+                  ? `Receipt ${existingReceiptNumber || editId} is Currently Approved & Active`
+                  : `Receipt ${existingReceiptNumber || editId} is in Edit & Review Mode`}
+              </strong>
+              <span className={receiptStatus === 'verified' ? 'status-live-chip' : 'status-pending-chip'}>
+                {receiptStatus === 'verified' ? '✓ Approved & Verified' : '⏳ Pending Signature & Approval'}
+              </span>
+            </div>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+              {receiptStatus === 'verified'
+                ? 'Modifying fields or replacing the signature here will immediately update the live online verification registry.'
+                : 'Review all payment and client particulars, upload your signature image in Section 3 below, and click "Approve & Authorize Receipt".'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="create-receipt-layout">
         {/* Left: Input Form */}
-        <form onSubmit={handleCreateReceipt} className="receipt-form-panel glass-panel">
+        <form onSubmit={(e) => handleSaveReceipt(e, 'verified')} className="receipt-form-panel glass-panel">
           {/* 1. Work Order Selector */}
           <div className="form-section-block">
             <h3 className="panel-section-title">1. Link to Client Work Order</h3>
@@ -751,9 +869,17 @@ export function CreateReceiptPage() {
                         ? 'Optimizing image with Canvas downscaler...'
                         : isUploading
                         ? 'Uploading to Vercel Object Storage...'
-                        : 'Choose signature image (auto-optimized & compressed < 35KB)'}
+                        : signatureUrl
+                        ? 'Upload / Replace Authorized Signature Image'
+                        : 'Click to Upload Signature Image (PNG, JPG, WebP — Auto-optimized)'}
                     </span>
                   </label>
+
+                  {!signatureUrl && (
+                    <div className="sig-missing-warning">
+                      <span>⚠️ No signature image uploaded yet. Upload your signature image above or draw below before approving.</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -780,7 +906,7 @@ export function CreateReceiptPage() {
               {signatureMode === 'seal' && (
                 <div className="signature-seal-zone">
                   <div className="seal-preview-box">
-                    <strong>MD. Rezaul Karim</strong>
+                    <strong>{signatoryName}</strong>
                     <span>Digitally Authorized & Registered · IoT-Berg Engineering</span>
                     <code>SHA-256 Verified Seal Active</code>
                   </div>
@@ -789,19 +915,24 @@ export function CreateReceiptPage() {
 
               {/* Signature Preview & Optimization Metrics */}
               {signatureUrl && signatureMode !== 'seal' && (
-                <div className="signature-preview-strip">
-                  <div className="sig-img-wrap">
-                    <img src={signatureUrl} alt="Active Signature" className="sig-preview-thumb" />
-                  </div>
-                  {signatureStats && (
-                    <div className="sig-stats-text">
-                      <span className="stat-pill-sm green">Optimized: {signatureStats.optimizedSize} KB</span>
-                      <span className="stat-pill-sm">Saved {signatureStats.reduction}%</span>
+                <div className="sig-attached-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <img src={signatureUrl} alt="Active Signature" className="sig-attached-preview" />
+                    <div>
+                      <span className="stat-pill-sm green" style={{ display: 'inline-block', marginBottom: '0.2rem' }}>
+                        ✓ Signature Attached
+                      </span>
+                      {signatureStats && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                          Optimized: {signatureStats.optimizedSize} KB (Saved {signatureStats.reduction}%)
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                   <button
                     type="button"
                     className="sig-remove-btn"
+                    title="Remove uploaded signature"
                     onClick={() => {
                       setSignatureUrl('')
                       setSignatureStats(null)
@@ -815,21 +946,42 @@ export function CreateReceiptPage() {
           </div>
 
           <div className="form-submit-row" style={{ marginTop: '1.5rem' }}>
-            <button type="submit" className="button button-primary button-full" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <span className="spinner-inline" />
-                  <span>Issuing Payment Receipt...</span>
-                </>
-              ) : (
-                <>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>Authorize & Issue Receipt ({formatCurrencyBDT(amountNum)})</span>
-                </>
-              )}
-            </button>
+            <div className="edit-submit-buttons-row">
+              <button
+                type="submit"
+                className="button button-approve"
+                disabled={isSaving}
+                style={{ flex: 1, padding: '0.85rem 1.25rem', fontSize: '0.92rem' }}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="spinner-inline" />
+                    <span>{isEditMode ? 'Approving Receipt...' : 'Issuing Payment Receipt...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>
+                      {isEditMode
+                        ? `Approve & Authorize Receipt (${formatCurrencyBDT(amountNum)})`
+                        : `Approve & Issue Receipt (${formatCurrencyBDT(amountNum)})`}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="button button-secondary"
+                disabled={isSaving}
+                onClick={(e) => handleSaveReceipt(e, 'pending_approval')}
+                style={{ padding: '0.85rem 1.15rem', fontSize: '0.86rem' }}
+              >
+                <span>💾 Save Draft / Keep in Edit Mode</span>
+              </button>
+            </div>
           </div>
         </form>
 
@@ -837,7 +989,9 @@ export function CreateReceiptPage() {
         <aside className="receipt-live-preview-panel glass-panel">
           <div className="preview-top-bar">
             <span className="preview-tag">Live Layout Preview</span>
-            <span className="preview-status-pill">✓ Verified Voucher</span>
+            <span className={receiptStatus === 'verified' ? 'status-live-chip' : 'status-pending-chip'}>
+              {receiptStatus === 'verified' ? '✓ Verified Voucher' : '⏳ Pending Approval'}
+            </span>
           </div>
 
           <div className="mini-receipt-card">
@@ -887,8 +1041,12 @@ export function CreateReceiptPage() {
             <div className="mini-sign-block">
               {signatureUrl ? (
                 <img src={signatureUrl} alt="Signature" className="mini-sign-img" />
+              ) : receiptStatus === 'pending_approval' ? (
+                <div className="mini-sign-text" style={{ color: '#d97706' }}>
+                  ⏳ Pending Signature Upload
+                </div>
               ) : (
-                <div className="mini-sign-text">MD. Rezaul Karim (Signed)</div>
+                <div className="mini-sign-text">{signatoryName} (Signed)</div>
               )}
               <div className="mini-sign-name">{signatoryName}</div>
               <div className="mini-sign-role">{signatoryRole}</div>

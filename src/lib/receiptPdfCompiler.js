@@ -538,6 +538,8 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
           ${
             receipt.signatureUrl
               ? `<img src="${receipt.signatureUrl}" alt="Authorized Signature" class="signature-img">`
+              : receipt.status === 'pending_approval'
+              ? `<div class="digital-seal-svg" style="color: #d97706; border-color: #fde68a;">DRAFT · Awaiting Signature</div>`
               : `<div class="digital-seal-svg">MD. Rezaul Karim (Digitally Signed)</div>`
           }
         </div>
@@ -545,7 +547,9 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
           <div class="sign-name">${receipt.signatoryName || 'MD. Rezaul Karim'}</div>
           <div class="sign-title">${receipt.signatoryRole || 'Project Manager & Team Lead'}</div>
           ${
-            receipt.sealEnabled !== false
+            receipt.status === 'pending_approval'
+              ? `<div class="official-seal" style="color: #d97706; border-color: #fde68a; background: #fffbeb;">⏳ Pending Signature Approval</div>`
+              : receipt.sealEnabled !== false
               ? `<div class="official-seal">★ IoT-Berg Verified Official ★</div>`
               : ''
           }

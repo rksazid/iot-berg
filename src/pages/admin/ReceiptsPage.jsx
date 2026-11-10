@@ -8,12 +8,15 @@ import { useAuth } from '../../context/AuthContext'
 
 export function ReceiptsPage() {
   const { hasRole } = useAuth()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [receipts, setReceipts] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [downloadingId, setDownloadingId] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
-  const [justIssuedId, setJustIssuedId] = useState(searchParams.get('issued') || null)
+
+  const justIssuedId = searchParams.get('issued')
+  const approvedId = searchParams.get('approved')
+  const savedId = searchParams.get('saved')
 
   useEffect(() => {
     loadReceipts()
@@ -82,18 +85,65 @@ export function ReceiptsPage() {
     )
   })
 
+  const pendingReceipt = receipts.find((r) => r.status === 'pending_approval')
+
   return (
     <div className="admin-subpage-view">
-      {justIssuedId && (
+      {(justIssuedId || approvedId) && (
         <div className="alert-banner-success glass-panel">
           <div className="banner-icon">✓</div>
           <div className="banner-content">
-            <strong>Receipt {justIssuedId} Issued & Verified Successfully!</strong>
-            <p>The money receipt has been digitally registered and online QR code verification is now active.</p>
+            <strong>
+              Receipt {approvedId || justIssuedId}{' '}
+              {approvedId ? 'Approved & Authorized Successfully!' : 'Issued & Verified Successfully!'}
+            </strong>
+            <p>
+              The money receipt has been digitally authorized and registered. Online QR verification and PDF download are now live.
+            </p>
           </div>
-          <button type="button" className="banner-dismiss" onClick={() => setJustIssuedId(null)}>
+          <button type="button" className="banner-dismiss" onClick={() => setSearchParams({})}>
             ✕
           </button>
+        </div>
+      )}
+
+      {savedId && (
+        <div className="review-mode-banner glass-panel">
+          <div className="banner-icon">💾</div>
+          <div className="banner-content" style={{ flex: 1 }}>
+            <strong style={{ color: '#92400e' }}>
+              Changes Saved for Receipt {savedId} (Still in Edit Mode)
+            </strong>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.84rem', color: '#78350f' }}>
+              Your edits and uploaded signature are saved. Click "Edit & Sign" anytime to review and approve.
+            </p>
+          </div>
+          <button type="button" className="banner-dismiss" onClick={() => setSearchParams({})}>
+            ✕
+          </button>
+        </div>
+      )}
+
+      {pendingReceipt && !savedId && !approvedId && (
+        <div className="review-mode-banner glass-panel">
+          <div className="banner-icon">⏳</div>
+          <div className="banner-content" style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <strong style={{ color: '#92400e', fontSize: '0.95rem' }}>
+                Pending Verification & Signature: {pendingReceipt.receiptNumber || pendingReceipt.id}
+              </strong>
+              <span className="status-pending-chip">⏳ In Edit Mode</span>
+            </div>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.84rem', color: '#78350f' }}>
+              Payment of {formatCurrencyBDT(pendingReceipt.amount)} recorded for {pendingReceipt.clientName}. Verify details, upload your signature image, and approve the receipt.
+            </p>
+          </div>
+          <Link
+            to={`/admin/receipts/${encodeURIComponent(pendingReceipt.id)}/edit`}
+            className="button button-sm button-approve"
+          >
+            ✏️ Edit, Sign & Approve →
+          </Link>
         </div>
       )}
 
@@ -193,10 +243,36 @@ export function ReceiptsPage() {
                       <span className="mode-pill-tag">{rec.paymentMode}</span>
                     </td>
                     <td>
-                      <span className="status-live-chip">✓ Verified</span>
+                      {rec.status === 'pending_approval' ? (
+                        <span className="status-pending-chip">⏳ Under Review</span>
+                      ) : (
+                        <span className="status-live-chip">✓ Verified</span>
+                      )}
                     </td>
                     <td>
                       <div className="action-buttons-inline">
+                        {rec.status === 'pending_approval' ? (
+                          <Link
+                            to={`/admin/receipts/${encodeURIComponent(rec.id)}/edit`}
+                            className="button button-sm button-approve"
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
+                            title="Verify, Edit, Upload Signature & Approve"
+                          >
+                            <span>✏️ Edit & Sign</span>
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/admin/receipts/${encodeURIComponent(rec.id)}/edit`}
+                            className="table-action-icon-btn"
+                            title="Edit Receipt & Signature"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </Link>
+                        )}
+
                         <button
                           type="button"
                           className="button button-sm button-primary"

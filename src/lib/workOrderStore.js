@@ -1,7 +1,7 @@
 import { numberToWordsBDT } from './numberToWords.js'
 
-const WO_STORAGE_KEY = 'iotberg_work_orders_v2'
-const REC_STORAGE_KEY = 'iotberg_payment_receipts_v2'
+const WO_STORAGE_KEY = 'iotberg_work_orders_v3'
+const REC_STORAGE_KEY = 'iotberg_payment_receipts_v3'
 
 const INITIAL_WORK_ORDERS = [
   {
@@ -91,7 +91,7 @@ const INITIAL_RECEIPTS = [
     signatoryEmail: 'rksazid@gmail.com',
     signatureUrl: null,
     sealEnabled: true,
-    status: 'verified',
+    status: 'pending_approval',
     verificationHash: '9a4f8b2c1e7d0356ae29c54f8b190a3d4e7f81b0c3d2e5f6a7b8c9d0e1f2a3b4',
     createdAt: '2026-11-08T14:30:00.000Z',
     updatedAt: '2026-11-08T14:30:00.000Z',
@@ -330,13 +330,21 @@ export const workOrderStore = {
     const paymentHead =
       receiptData.paymentHead || receiptData.paymentCategory || 'Advance Payment'
 
-    const existingIndex = all.findIndex((item) => item.id === receiptData.id)
+    const existingIndex = all.findIndex(
+      (item) =>
+        item.id === receiptData.id ||
+        (receiptData.receiptNumber && item.receiptNumber === receiptData.receiptNumber),
+    )
+
+    const resolvedWorkOrderRef =
+      receiptData.workOrderRef || linkedWo?.workOrderRef || linkedWo?.id || receiptData.workOrderId
 
     let savedItem
     if (existingIndex >= 0) {
       savedItem = {
         ...all[existingIndex],
         ...receiptData,
+        workOrderRef: resolvedWorkOrderRef,
         paymentHead,
         paymentCategory: paymentHead,
         coreContractValue: coreVal,
@@ -349,7 +357,15 @@ export const workOrderStore = {
         balanceRemaining,
         amount: amountNum,
         amountInWords: inWords,
+        status: receiptData.status || all[existingIndex].status || 'pending_approval',
+        signatureUrl:
+          receiptData.signatureUrl !== undefined
+            ? receiptData.signatureUrl
+            : all[existingIndex].signatureUrl,
         updatedAt: now,
+      }
+      if (savedItem.status === 'verified' && !savedItem.approvedAt) {
+        savedItem.approvedAt = now
       }
       all[existingIndex] = savedItem
     } else {
@@ -365,6 +381,7 @@ export const workOrderStore = {
         ...receiptData,
         id: generatedId,
         receiptNumber: generatedId,
+        workOrderRef: resolvedWorkOrderRef,
         paymentHead,
         paymentCategory: paymentHead,
         coreContractValue: coreVal,
@@ -377,16 +394,40 @@ export const workOrderStore = {
         balanceRemaining,
         amount: amountNum,
         amountInWords: inWords,
-        status: receiptData.status || 'verified',
+        status: receiptData.status || 'pending_approval',
         verificationHash: receiptData.verificationHash || hash,
         createdAt: now,
         updatedAt: now,
+      }
+      if (savedItem.status === 'verified') {
+        savedItem.approvedAt = now
       }
       all.unshift(savedItem)
     }
 
     persist(REC_STORAGE_KEY, all)
     return savedItem
+  },
+
+  approveReceipt(id, signatureUrl = null) {
+    const all = this.getReceipts()
+    const index = all.findIndex((r) => r.id === id || r.receiptNumber === id)
+    if (index >= 0) {
+      const now = new Date().toISOString()
+      const randomSeed = Math.random().toString(36).substring(2, 15)
+      const hash = `ib_${Date.now().toString(16)}_${randomSeed}_approved`
+      all[index] = {
+        ...all[index],
+        status: 'verified',
+        verificationHash: hash,
+        signatureUrl: signatureUrl !== null ? signatureUrl : all[index].signatureUrl,
+        approvedAt: now,
+        updatedAt: now,
+      }
+      persist(REC_STORAGE_KEY, all)
+      return all[index]
+    }
+    return null
   },
 
   deleteReceipt(id) {

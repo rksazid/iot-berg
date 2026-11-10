@@ -498,13 +498,36 @@ export function AdminDashboardPage() {
                         <span className="client-sub" style={{ fontWeight: 600, color: 'var(--text)' }}>
                           {rec.clientName}
                         </span>
-                        <span className="mode-sub">{rec.paymentHead || rec.paymentCategory || `${rec.paymentMode} Receipt`}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', marginTop: '2px' }}>
+                          <span className="mode-sub">{rec.paymentHead || rec.paymentCategory || `${rec.paymentMode} Receipt`}</span>
+                          {rec.status === 'pending_approval' ? (
+                            <span className="status-pending-chip" style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>⏳ Edit Mode</span>
+                          ) : (
+                            <span className="status-live-chip" style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>✓ Approved</span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <strong style={{ color: '#0d9488' }}>{formatCurrencyBDT(rec.amount)}</strong>
                       </td>
                       <td>
                         <div className="action-buttons-inline">
+                          <Link
+                            to={`/admin/receipts/${encodeURIComponent(rec.id)}/edit`}
+                            className={rec.status === 'pending_approval' ? 'button button-sm button-approve' : 'table-action-icon-btn'}
+                            style={rec.status === 'pending_approval' ? { padding: '0.2rem 0.5rem', fontSize: '0.68rem' } : undefined}
+                            title="Verify, Edit & Upload Signature"
+                          >
+                            {rec.status === 'pending_approval' ? (
+                              <span>✏️ Edit & Sign</span>
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            )}
+                          </Link>
+
                           <button
                             type="button"
                             className="table-action-icon-btn"

@@ -89,37 +89,75 @@ export function VerifyReceiptPage() {
     )
   }
 
+  const isPending = receipt.status === 'pending_approval'
+
   return (
     <div className="page verify-page">
       <div className="verify-shell">
-        {/* Verification Success Header Card */}
-        <section className="verify-banner-panel glass-panel">
+        {/* Verification Header Card */}
+        <section
+          className="verify-banner-panel glass-panel"
+          style={isPending ? { borderColor: '#fcd34d' } : undefined}
+        >
           <div className="verify-status-badge-row">
-            <div className="verified-shield-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <polyline points="9 12 11 14 15 10" />
-              </svg>
+            <div
+              className="verified-shield-icon"
+              style={
+                isPending
+                  ? { background: '#fef3c7', borderColor: '#fde68a', color: '#d97706' }
+                  : undefined
+              }
+            >
+              {isPending ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+              )}
             </div>
             <div className="verify-status-copy">
               <span className="verify-kicker">IoT-Berg Cloud Registry</span>
-              <h1 className="verify-heading">Payment Receipt Verified</h1>
+              <h1 className="verify-heading" style={isPending ? { color: '#b45309' } : undefined}>
+                {isPending ? 'Receipt Under Review / Pending Signature Approval' : 'Payment Receipt Verified'}
+              </h1>
             </div>
           </div>
           <p className="verify-desc">
-            Authentic payment record verified against the IoT-Berg cloud security registry.
+            {isPending
+              ? 'This payment voucher is currently in edit & review mode and awaiting final authorized signature approval.'
+              : 'Authentic payment record verified against the IoT-Berg cloud security registry.'}
           </p>
           <div className="verify-meta-strip">
             <span className="meta-tag">
               <strong>Receipt No:</strong> <code>{receipt.receiptNumber || receipt.id}</code>
             </span>
             <span className="meta-tag">
-              <strong>Status:</strong> <span className="status-live-txt">✓ Active & Authorized</span>
+              <strong>Status:</strong>{' '}
+              {isPending ? (
+                <span style={{ color: '#d97706', fontWeight: 700 }}>⏳ Pending Signature & Approval</span>
+              ) : (
+                <span className="status-live-txt">✓ Active & Authorized</span>
+              )}
             </span>
             <span className="meta-tag">
               <strong>Registry Date:</strong> {receipt.receiptDate || receipt.paymentDate}
             </span>
           </div>
+          {isPending && (
+            <div style={{ marginTop: '0.85rem' }}>
+              <Link
+                to={`/admin/receipts/${encodeURIComponent(receipt.id)}/edit`}
+                className="button button-sm button-approve"
+              >
+                ✏️ Open in Admin Edit & Approval Portal →
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Receipt Content Card */}
@@ -189,30 +227,32 @@ export function VerifyReceiptPage() {
                 <div className="addons-callout-header">
                   <span className="addons-callout-badge">Additional Operational Services</span>
                   <span className="addons-callout-total">
-                    Add-ons: {formatCurrencyBDT(receipt.totalAdditionalCharges || 100000)}
+                    Add-ons: {formatCurrencyBDT(receipt.totalAdditionalCharges ?? 0)}
                   </span>
                 </div>
                 <div className="addons-callout-grid">
                   <div className="addons-callout-tile">
                     <span className="tile-subtitle">Core Software Deliverables</span>
                     <strong className="tile-amount">
-                      {formatCurrencyBDT(receipt.coreContractValue || (receipt.totalContractValue - (receipt.totalAdditionalCharges || 100000)))}
+                      {formatCurrencyBDT(receipt.coreContractValue ?? (receipt.totalContractValue - (receipt.totalAdditionalCharges ?? 0)))}
                     </strong>
                     <span className="tile-detail">Base engineering & architecture</span>
                   </div>
                   <div className="addons-callout-tile">
                     <span className="tile-subtitle">Server Management (1 Year)</span>
                     <strong className="tile-amount" style={{ color: '#4f46e5' }}>
-                      {formatCurrencyBDT(receipt.serverCharge || 60000)}
+                      {formatCurrencyBDT(receipt.serverCharge ?? 0)}
                     </strong>
                     <span className="tile-detail">Managed cloud & object storage</span>
                   </div>
                   <div className="addons-callout-tile">
                     <span className="tile-subtitle">Software Maintenance (1 Year)</span>
                     <strong className="tile-amount" style={{ color: '#4f46e5' }}>
-                      {formatCurrencyBDT(receipt.maintenanceCharge || 40000)}
+                      {formatCurrencyBDT(receipt.maintenanceCharge ?? 0)}
                     </strong>
-                    <span className="tile-detail">Security patches & uptime SLA</span>
+                    <span className="tile-detail">
+                      {(receipt.maintenanceCharge ?? 0) === 0 ? 'Bundled in yearly SLA fee' : 'Security patches & uptime SLA'}
+                    </span>
                   </div>
                 </div>
                 <p className="addons-callout-disclaimer">
@@ -235,6 +275,10 @@ export function VerifyReceiptPage() {
                 <div className="sign-signature-frame">
                   {receipt.signatureUrl ? (
                     <img src={receipt.signatureUrl} alt="Signature" className="auth-sign-img" />
+                  ) : isPending ? (
+                    <div className="auth-sign-digital" style={{ color: '#d97706', borderColor: '#fde68a', background: '#fffbeb' }}>
+                      ⏳ Pending Signature Approval
+                    </div>
                   ) : (
                     <div className="auth-sign-digital">MD. Rezaul Karim (Signed)</div>
                   )}
