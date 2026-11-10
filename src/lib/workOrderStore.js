@@ -199,8 +199,22 @@ export const workOrderStore = {
       }
       const data = await res.json()
       if (data.initialized && Array.isArray(data.workOrders) && Array.isArray(data.receipts)) {
+        const localRecs = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
+        const remoteRecs = data.receipts.map((remoteRec) => {
+          const localMatch = localRecs.find(
+            (l) => l.id === remoteRec.id || l.receiptNumber === remoteRec.receiptNumber,
+          )
+          if (
+            localMatch?.updatedAt &&
+            remoteRec?.updatedAt &&
+            new Date(localMatch.updatedAt) > new Date(remoteRec.updatedAt)
+          ) {
+            return localMatch
+          }
+          return remoteRec
+        })
         persist(WO_STORAGE_KEY, data.workOrders)
-        persist(REC_STORAGE_KEY, data.receipts)
+        persist(REC_STORAGE_KEY, remoteRecs)
         return { workOrders: this.getWorkOrders(), receipts: this.getReceipts(), synced: true }
       }
       // Registry is empty on cloud -> seed it with initial data cleanly
@@ -223,12 +237,20 @@ export const workOrderStore = {
    */
   async fetchReceiptById(id) {
     if (!id) return null
+    const localCached = this.getReceipt(id)
     if (typeof window !== 'undefined' && typeof fetch === 'function') {
       try {
         const res = await fetch(`/api/registry?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           if (data?.receipt) {
+            if (
+              localCached?.updatedAt &&
+              data.receipt?.updatedAt &&
+              new Date(localCached.updatedAt) > new Date(data.receipt.updatedAt)
+            ) {
+              return localCached
+            }
             // Merge into local cache
             const current = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
             const idx = current.findIndex(
@@ -245,14 +267,14 @@ export const workOrderStore = {
         } else if (res.status === 404) {
           const body = await res.json().catch(() => null)
           if (body?.initialized) {
-            return this.getReceipt(id)
+            return localCached
           }
         }
       } catch (err) {
         console.warn('Dynamic receipt lookup fallback to local:', err.message)
       }
     }
-    return this.getReceipt(id)
+    return localCached
   },
 
   getWorkOrders() {
