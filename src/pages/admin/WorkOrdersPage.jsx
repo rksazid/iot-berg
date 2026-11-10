@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { workOrderStore } from '../../lib/workOrderStore'
+import { workOrderStore, generateWorkOrderRef } from '../../lib/workOrderStore'
 import { formatCurrencyBDT } from '../../lib/numberToWords'
 import { compileReceiptHtml } from '../../lib/receiptPdfCompiler'
 import { generatePdf } from '../../lib/pdfClient'
@@ -19,14 +19,13 @@ export function WorkOrdersPage() {
   // Work Order Form State (Strictly Work Order scope — no forced advance fields)
   const [formData, setFormData] = useState({
     id: '',
-    clientName: 'Sazin Innovative Industries Ltd.',
-    clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
-    clientEmail: 'sazin.ltd@gmail.com',
-    clientPhone: '+88-02-9007014',
-    clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
-    projectName: 'Sazin Business Website (Canada & Bangladesh)',
-    projectScope:
-      'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
+    clientName: '',
+    clientContactPerson: '',
+    clientEmail: '',
+    clientPhone: '',
+    clientAddress: '',
+    projectName: '',
+    projectScope: '',
     coreContractValue: '450000',
     serverCharge: '30000',
     serverPeriod: '1 Year',
@@ -36,14 +35,14 @@ export function WorkOrdersPage() {
     otherAdditionalNote: 'Yearly Server Charge & Maintenance Fee',
     contractValue: '480000',
     status: 'active',
-    orderDate: '2026-11-02',
-    deliveryDate: '2027-01-31',
-    notes:
-      'Official signed Work Order SIIL - A10003. Initial 90-Days Post-Launch Warranty & Free Support included. 3-Year Service & Maintenance Agreement.',
+    orderDate: new Date().toISOString().split('T')[0],
+    deliveryDate: '',
+    notes: '',
   })
 
   useEffect(() => {
     loadOrders()
+    workOrderStore.syncFromCloud().then(() => loadOrders())
     if (searchParams.get('action') === 'new') {
       handleOpenCreate()
     }
@@ -60,16 +59,16 @@ export function WorkOrdersPage() {
 
   const handleOpenCreate = () => {
     setEditingOrder(null)
+    const freshId = generateWorkOrderRef(workOrderStore.getWorkOrders().map((w) => w.id))
     setFormData({
-      id: `SIIL-${new Date().getFullYear()}-${String(workOrders.length + 1).padStart(3, '0')}`,
-      clientName: 'Sazin Innovative Industries Ltd.',
-      clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
-      clientEmail: 'sazin.ltd@gmail.com',
-      clientPhone: '+88-02-9007014',
-      clientAddress: 'Road-30, House-432, Mohakhali DOHS, Dhaka, Bangladesh',
-      projectName: 'Sazin Business Website (Canada & Bangladesh)',
-      projectScope:
-        'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
+      id: freshId,
+      clientName: '',
+      clientContactPerson: '',
+      clientEmail: '',
+      clientPhone: '',
+      clientAddress: '',
+      projectName: '',
+      projectScope: '',
       coreContractValue: '450000',
       serverCharge: '30000',
       serverPeriod: '1 Year',
@@ -79,10 +78,9 @@ export function WorkOrdersPage() {
       otherAdditionalNote: 'Yearly Server Charge & Maintenance Fee',
       contractValue: '480000',
       status: 'active',
-      orderDate: '2026-11-02',
-      deliveryDate: '2027-01-31',
-      notes:
-        'Official signed Work Order SIIL - A10003. Initial 90-Days Post-Launch Warranty & Free Support included. 3-Year Service & Maintenance Agreement.',
+      orderDate: new Date().toISOString().split('T')[0],
+      deliveryDate: '',
+      notes: '',
     })
     setShowModal(true)
   }
@@ -124,9 +122,9 @@ export function WorkOrdersPage() {
     (Number(formData.otherAdditionalCharge) || 0)
   const calculatedGrandTotal = (Number(formData.coreContractValue) || 0) + calculatedAddons
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    workOrderStore.saveWorkOrder({
+    await workOrderStore.saveWorkOrderAsync({
       ...formData,
       coreContractValue: Number(formData.coreContractValue) || 0,
       serverCharge: Number(formData.serverCharge) || 0,
@@ -140,16 +138,16 @@ export function WorkOrdersPage() {
     loadOrders()
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm(`Are you sure you want to delete work order ${id}?`)) {
-      workOrderStore.deleteWorkOrder(id)
+      await workOrderStore.deleteWorkOrderAsync(id)
       loadOrders()
     }
   }
 
-  const handleDeleteReceiptFromModal = (receiptId) => {
+  const handleDeleteReceiptFromModal = async (receiptId) => {
     if (confirm(`Are you sure you want to delete payment receipt ${receiptId}?`)) {
-      workOrderStore.deleteReceipt(receiptId)
+      await workOrderStore.deleteReceiptAsync(receiptId)
       loadOrders()
     }
   }
@@ -165,7 +163,7 @@ export function WorkOrdersPage() {
           html,
           format: 'A4',
           printBackground: true,
-          margin: { top: '10mm', right: '12mm', bottom: '10mm', left: '12mm' },
+          margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
         },
       })
 
@@ -467,7 +465,7 @@ export function WorkOrdersPage() {
                     id="client-name"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. TechMatrix Solutions Ltd."
+                    placeholder="e.g. Client Industrial Systems Ltd."
                     value={formData.clientName}
                     onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                     required

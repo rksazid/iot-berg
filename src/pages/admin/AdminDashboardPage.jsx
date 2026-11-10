@@ -16,6 +16,7 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     refreshData()
+    workOrderStore.syncFromCloud().then(() => refreshData())
   }, [])
 
   const refreshData = () => {
@@ -35,7 +36,7 @@ export function AdminDashboardPage() {
           html,
           format: 'A4',
           printBackground: true,
-          margin: { top: '10mm', right: '12mm', bottom: '10mm', left: '12mm' },
+          margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
         },
       })
 

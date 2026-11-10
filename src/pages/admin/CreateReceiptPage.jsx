@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, useParams, Link } from 'react-router-dom'
-import { workOrderStore } from '../../lib/workOrderStore'
+import { workOrderStore, generateReceiptNumber } from '../../lib/workOrderStore'
 import { numberToWordsBDT, formatCurrencyBDT } from '../../lib/numberToWords'
 import { optimizeImage } from '../../lib/imageOptimizer'
 import { uploadToVercelBlob } from '../../lib/blobStorage'
@@ -31,7 +31,9 @@ export function CreateReceiptPage() {
   const [selectedWoId, setSelectedWoId] = useState(preselectedWoId)
   const [selectedWo, setSelectedWo] = useState(null)
   const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false)
-  const [existingReceiptNumber, setExistingReceiptNumber] = useState('')
+  const [existingReceiptNumber, setExistingReceiptNumber] = useState(() =>
+    isEditMode ? '' : generateReceiptNumber(workOrderStore.getReceipts().map((r) => r.id)),
+  )
   const [receiptStatus, setReceiptStatus] = useState('pending_approval')
 
   // Payment Particulars
@@ -39,7 +41,7 @@ export function CreateReceiptPage() {
   const [amount, setAmount] = useState('90000')
   const [percentHelper, setPercentHelper] = useState('18.8')
   const [paymentMode, setPaymentMode] = useState('Cash')
-  const [paymentDate, setPaymentDate] = useState('2026-11-08')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
   const [transactionNote, setTransactionNote] = useState('')
 
   // Client & Work Order Context
@@ -62,6 +64,7 @@ export function CreateReceiptPage() {
   const [signatoryName, setSignatoryName] = useState('MD. Rezaul Karim')
   const [signatoryRole, setSignatoryRole] = useState('Project Manager & Team Lead')
   const [signatureUrl, setSignatureUrl] = useState('')
+  const [signatureDataUrl, setSignatureDataUrl] = useState('')
   const [signatureStats, setSignatureStats] = useState(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -75,41 +78,61 @@ export function CreateReceiptPage() {
   // QR Preview
   const [previewQr, setPreviewQr] = useState('')
 
-  // Load existing receipt if editing
+  const populateFromExisting = (existing) => {
+    setExistingReceiptNumber(existing.receiptNumber || existing.id)
+    setSelectedWoId(existing.workOrderId || '')
+    setPaymentHead(existing.paymentHead || existing.paymentCategory || 'Advance Payment')
+    setAmount(String(existing.amount || ''))
+    setPaymentMode(existing.paymentMode || 'Cash')
+    setPaymentDate(existing.paymentDate || existing.receiptDate || new Date().toISOString().split('T')[0])
+    setTransactionNote(existing.transactionNote || '')
+    setClientName(existing.clientName || '')
+    setClientContactPerson(existing.clientContactPerson || '')
+    setClientEmail(existing.clientEmail || '')
+    setClientAddress(existing.clientAddress || '')
+    setProjectName(existing.projectName || '')
+    const totVal = Number(existing.totalContractValue) || 480000
+    setTotalContractValue(totVal)
+    setCoreContractValue(existing.coreContractValue || 450000)
+    setServerCharge(existing.serverCharge != null ? existing.serverCharge : 30000)
+    setServerPeriod(existing.serverPeriod || '1 Year')
+    setMaintenanceCharge(existing.maintenanceCharge != null ? existing.maintenanceCharge : 0)
+    setMaintenancePeriod(existing.maintenancePeriod || '1 Year')
+    setTotalAdditionalCharges(existing.totalAdditionalCharges || 30000)
+    setSignatoryName(existing.signatoryName || 'MD. Rezaul Karim')
+    setSignatoryRole(existing.signatoryRole || 'Project Manager & Team Lead')
+    setSignatureUrl(existing.signatureUrl || existing.signatureDataUrl || '')
+    setSignatureDataUrl(existing.signatureDataUrl || '')
+    setReceiptStatus(existing.status || 'pending_approval')
+    if (totVal > 0 && existing.amount) {
+      setPercentHelper(((Number(existing.amount) / totVal) * 100).toFixed(1))
+    }
+  }
+
+  // Load existing receipt if editing (syncs from cloud too so cross-device works seamlessly)
   useEffect(() => {
-    if (editId) {
-      const existing = workOrderStore.getReceipt(editId)
-      if (existing) {
-        setExistingReceiptNumber(existing.receiptNumber || existing.id)
-        setSelectedWoId(existing.workOrderId || '')
-        setPaymentHead(existing.paymentHead || existing.paymentCategory || 'Advance Payment')
-        setAmount(String(existing.amount || ''))
-        setPaymentMode(existing.paymentMode || 'Cash')
-        setPaymentDate(existing.paymentDate || existing.receiptDate || new Date().toISOString().split('T')[0])
-        setTransactionNote(existing.transactionNote || '')
-        setClientName(existing.clientName || '')
-        setClientContactPerson(existing.clientContactPerson || '')
-        setClientEmail(existing.clientEmail || '')
-        setClientAddress(existing.clientAddress || '')
-        setProjectName(existing.projectName || '')
-        const totVal = Number(existing.totalContractValue) || 480000
-        setTotalContractValue(totVal)
-        setCoreContractValue(existing.coreContractValue || 450000)
-        setServerCharge(existing.serverCharge != null ? existing.serverCharge : 30000)
-        setServerPeriod(existing.serverPeriod || '1 Year')
-        setMaintenanceCharge(existing.maintenanceCharge != null ? existing.maintenanceCharge : 0)
-        setMaintenancePeriod(existing.maintenancePeriod || '1 Year')
-        setTotalAdditionalCharges(existing.totalAdditionalCharges || 30000)
-        setSignatoryName(existing.signatoryName || 'MD. Rezaul Karim')
-        setSignatoryRole(existing.signatoryRole || 'Project Manager & Team Lead')
-        setSignatureUrl(existing.signatureUrl || '')
-        setReceiptStatus(existing.status || 'pending_approval')
-        if (totVal > 0 && existing.amount) {
-          setPercentHelper(((Number(existing.amount) / totVal) * 100).toFixed(1))
+    let active = true
+    async function init() {
+      if (editId) {
+        const localMatch = workOrderStore.getReceipt(editId)
+        if (localMatch && active) {
+          populateFromExisting(localMatch)
         }
+        const remoteMatch = await workOrderStore.fetchReceiptById(editId)
+        if (remoteMatch && active) {
+          populateFromExisting(remoteMatch)
+        }
+      } else {
+        await workOrderStore.syncFromCloud()
+      }
+      if (active) {
+        setIsLoadedFromStorage(true)
       }
     }
-    setIsLoadedFromStorage(true)
+    init()
+    return () => {
+      active = false
+    }
   }, [editId])
 
   // Populate context from selected Work Order
@@ -220,29 +243,44 @@ export function CreateReceiptPage() {
 
     setIsOptimizing(true)
     try {
-      // 1. Optimize image locally in Canvas
-      const optimized = await optimizeImage(file, {
-        maxWidth: 600,
-        maxHeight: 250,
-        outputType: 'image/png',
-        trimWhitespace: true,
-      })
+      let dataUrl = ''
+      let contentType = 'image/png'
 
-      setSignatureStats({
-        originalSize: Math.round(optimized.originalSizeBytes / 1024),
-        optimizedSize: Math.round(optimized.sizeBytes / 1024),
-        reduction: optimized.reductionPercent,
-      })
+      try {
+        // 1. Optimize image locally in Canvas
+        const optimized = await optimizeImage(file, {
+          maxWidth: 600,
+          maxHeight: 250,
+          outputType: 'image/png',
+          trimWhitespace: true,
+        })
+        dataUrl = optimized.dataUrl
+        setSignatureStats({
+          originalSize: Math.round(optimized.originalSizeBytes / 1024),
+          optimizedSize: Math.round(optimized.sizeBytes / 1024),
+          reduction: optimized.reductionPercent,
+        })
+      } catch (optErr) {
+        console.warn('Canvas optimization fallback to raw file:', optErr)
+        contentType = file.type || 'image/png'
+        dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = (ev) => resolve(ev.target.result)
+          reader.onerror = () => reject(new Error('Failed to read signature file'))
+          reader.readAsDataURL(file)
+        })
+      }
 
-      // Set optimized preview immediately
-      setSignatureUrl(optimized.dataUrl)
+      // Set optimized preview & inline data fallback immediately
+      setSignatureDataUrl(dataUrl)
+      setSignatureUrl(dataUrl)
 
       // 2. Upload to Vercel Object Storage (Blob)
       setIsUploading(true)
       const uploadRes = await uploadToVercelBlob({
         filename: `signature-${Date.now()}.png`,
-        base64Data: optimized.dataUrl,
-        contentType: 'image/png',
+        base64Data: dataUrl,
+        contentType,
       })
 
       if (uploadRes?.url) {
@@ -369,9 +407,22 @@ export function CreateReceiptPage() {
         outputType: 'image/png',
         trimWhitespace: true,
       })
+      setSignatureDataUrl(optimized.dataUrl)
       setSignatureUrl(optimized.dataUrl)
+
+      setIsUploading(true)
+      const uploadRes = await uploadToVercelBlob({
+        filename: `drawn-sig-${Date.now()}.png`,
+        base64Data: optimized.dataUrl,
+        contentType: 'image/png',
+      })
+      if (uploadRes?.url) {
+        setSignatureUrl(uploadRes.url)
+      }
     } catch (err) {
       console.warn('Canvas optimization note:', err)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -384,6 +435,8 @@ export function CreateReceiptPage() {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.restore()
     setSignatureUrl('')
+    setSignatureDataUrl('')
+    setSignatureStats(null)
   }
 
   // Handle Form Submit (Create or Edit, Approve or Save Draft)
@@ -392,9 +445,18 @@ export function CreateReceiptPage() {
     setIsSaving(true)
 
     try {
-      const savedReceipt = workOrderStore.saveReceipt({
-        ...(isEditMode ? { id: editId, receiptNumber: existingReceiptNumber || editId } : {}),
+      const finalSignatureUrl = signatureUrl || signatureDataUrl || null
+      const finalSignatureDataUrl =
+        signatureDataUrl || (signatureUrl && signatureUrl.startsWith('data:') ? signatureUrl : null)
+
+      const savedReceipt = await workOrderStore.saveReceiptAsync({
+        ...(isEditMode
+          ? { id: editId, receiptNumber: existingReceiptNumber || editId }
+          : existingReceiptNumber
+          ? { id: existingReceiptNumber, receiptNumber: existingReceiptNumber }
+          : {}),
         workOrderId: selectedWoId,
+        workOrderRef: selectedWo?.workOrderRef || selectedWoId,
         clientName,
         clientContactPerson,
         clientEmail,
@@ -420,7 +482,8 @@ export function CreateReceiptPage() {
         signatoryRole,
         signatoryCompany: 'IoT-Berg Engineering',
         signatoryEmail: currentUser?.email || 'rksazid@gmail.com',
-        signatureUrl: signatureUrl || null,
+        signatureUrl: finalSignatureUrl,
+        signatureDataUrl: finalSignatureDataUrl,
         sealEnabled: true,
         status: targetStatus,
       })
@@ -914,10 +977,19 @@ export function CreateReceiptPage() {
               )}
 
               {/* Signature Preview & Optimization Metrics */}
-              {signatureUrl && signatureMode !== 'seal' && (
+              {(signatureUrl || signatureDataUrl) && signatureMode !== 'seal' && (
                 <div className="sig-attached-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <img src={signatureUrl} alt="Active Signature" className="sig-attached-preview" />
+                    <img
+                      src={signatureUrl || signatureDataUrl}
+                      alt="Active Signature"
+                      className="sig-attached-preview"
+                      onError={(e) => {
+                        if (signatureDataUrl && e.currentTarget.src !== signatureDataUrl) {
+                          e.currentTarget.src = signatureDataUrl
+                        }
+                      }}
+                    />
                     <div>
                       <span className="stat-pill-sm green" style={{ display: 'inline-block', marginBottom: '0.2rem' }}>
                         ✓ Signature Attached
@@ -935,6 +1007,7 @@ export function CreateReceiptPage() {
                     title="Remove uploaded signature"
                     onClick={() => {
                       setSignatureUrl('')
+                      setSignatureDataUrl('')
                       setSignatureStats(null)
                     }}
                   >
@@ -950,10 +1023,15 @@ export function CreateReceiptPage() {
               <button
                 type="submit"
                 className="button button-approve"
-                disabled={isSaving}
+                disabled={isSaving || isOptimizing || isUploading}
                 style={{ flex: 1, padding: '0.85rem 1.25rem', fontSize: '0.92rem' }}
               >
-                {isSaving ? (
+                {isOptimizing || isUploading ? (
+                  <>
+                    <span className="spinner-inline" />
+                    <span>{isOptimizing ? 'Optimizing Signature...' : 'Uploading Signature...'}</span>
+                  </>
+                ) : isSaving ? (
                   <>
                     <span className="spinner-inline" />
                     <span>{isEditMode ? 'Approving Receipt...' : 'Issuing Payment Receipt...'}</span>
@@ -975,7 +1053,7 @@ export function CreateReceiptPage() {
               <button
                 type="button"
                 className="button button-secondary"
-                disabled={isSaving}
+                disabled={isSaving || isOptimizing || isUploading}
                 onClick={(e) => handleSaveReceipt(e, 'pending_approval')}
                 style={{ padding: '0.85rem 1.15rem', fontSize: '0.86rem' }}
               >
@@ -998,7 +1076,9 @@ export function CreateReceiptPage() {
             <div className="mini-brand-row">
               <div>
                 <strong className="mini-brand-name">IoT-Berg</strong>
-                <span className="mini-brand-sub">Official Money Receipt</span>
+                <span className="mini-brand-sub">
+                  Official Money Receipt · {existingReceiptNumber || editId || 'Draft'}
+                </span>
               </div>
               <div className="mini-qr-box">
                 {previewQr && <img src={previewQr} alt="QR" className="mini-qr-img" />}
@@ -1019,7 +1099,7 @@ export function CreateReceiptPage() {
               <div className="mini-info-line">
                 <span>Order Ref:</span>
                 <code style={{ color: 'var(--brand-strong)', fontWeight: 700 }}>
-                  {selectedWoId || 'Standalone'}
+                  {selectedWo?.workOrderRef || selectedWoId || 'Standalone'}
                 </code>
               </div>
               <div className="mini-info-line">
@@ -1039,8 +1119,17 @@ export function CreateReceiptPage() {
             </div>
 
             <div className="mini-sign-block">
-              {signatureUrl ? (
-                <img src={signatureUrl} alt="Signature" className="mini-sign-img" />
+              {signatureUrl || signatureDataUrl ? (
+                <img
+                  src={signatureUrl || signatureDataUrl}
+                  alt="Signature"
+                  className="mini-sign-img"
+                  onError={(e) => {
+                    if (signatureDataUrl && e.currentTarget.src !== signatureDataUrl) {
+                      e.currentTarget.src = signatureDataUrl
+                    }
+                  }}
+                />
               ) : receiptStatus === 'pending_approval' ? (
                 <div className="mini-sign-text" style={{ color: '#d97706' }}>
                   ⏳ Pending Signature Upload

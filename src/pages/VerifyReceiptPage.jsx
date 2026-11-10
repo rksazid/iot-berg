@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { workOrderStore } from '../lib/workOrderStore'
 import { formatCurrencyBDT } from '../lib/numberToWords'
 import { generateQrDataUrl } from '../lib/qrCode'
@@ -8,19 +8,55 @@ import { generatePdf } from '../lib/pdfClient'
 
 export function VerifyReceiptPage() {
   const { receiptId } = useParams()
+  const navigate = useNavigate()
+  const [lookupInput, setLookupInput] = useState('')
   const [receipt, setReceipt] = useState(null)
+  const [isLoading, setIsLoading] = useState(Boolean(receiptId))
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState(null)
 
   useEffect(() => {
-    const found = workOrderStore.getReceipt(receiptId)
-    setReceipt(found)
+    let active = true
+    async function load() {
+      if (!receiptId) {
+        setReceipt(null)
+        setIsLoading(false)
+        return
+      }
+      setIsLoading(true)
+      // Show cached version immediately if present, then sync dynamically from cloud registry
+      const cached = workOrderStore.getReceipt(receiptId)
+      if (cached && active) {
+        setReceipt(cached)
+        generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
+          if (active) setQrCodeUrl(qr)
+        })
+      }
 
-    if (found) {
-      generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then(setQrCodeUrl)
+      const fresh = await workOrderStore.fetchReceiptById(receiptId)
+      if (active) {
+        setReceipt(fresh)
+        if (fresh) {
+          generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
+            if (active) setQrCodeUrl(qr)
+          })
+        }
+        setIsLoading(false)
+      }
+    }
+    load()
+    return () => {
+      active = false
     }
   }, [receiptId])
+
+  const handleLookupSubmit = (e) => {
+    e.preventDefault()
+    const clean = lookupInput.trim()
+    if (!clean) return
+    navigate(`/verify/${encodeURIComponent(clean)}`)
+  }
 
   const handleDownloadPdf = async () => {
     if (!receipt) return
@@ -36,7 +72,7 @@ export function VerifyReceiptPage() {
           html: htmlPayload,
           format: 'A4',
           printBackground: true,
-          margin: { top: '10mm', right: '12mm', bottom: '10mm', left: '12mm' },
+          margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
         },
       })
 
@@ -61,6 +97,67 @@ export function VerifyReceiptPage() {
     window.print()
   }
 
+  // Dynamic Receipt Verification Lookup Portal (/verify without an ID)
+  if (!receiptId) {
+    return (
+      <div className="page verify-page">
+        <div className="verify-container glass-panel" style={{ maxWidth: '580px', margin: '2rem auto', padding: '2.5rem 2rem', textAlign: 'center' }}>
+          <div className="verified-shield-icon" style={{ margin: '0 auto 1rem' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
+          </div>
+          <span className="verify-kicker">IoT-Berg Online Verification Registry</span>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 700, margin: '0.35rem 0 0.65rem' }}>
+            Verify Official Money Receipt
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginBottom: '1.5rem' }}>
+            Enter your Receipt Number from a digital or printed IoT-Berg voucher, or scan the receipt QR code directly with your phone camera.
+          </p>
+
+          <form onSubmit={handleLookupSubmit} style={{ display: 'flex', gap: '0.6rem', maxWidth: '460px', margin: '0 auto 1.25rem' }}>
+            <input
+              type="text"
+              className="form-input font-mono"
+              placeholder="e.g. IB-REC-2611-7C4N"
+              value={lookupInput}
+              onChange={(e) => setLookupInput(e.target.value)}
+              style={{ flex: 1 }}
+              required
+            />
+            <button type="submit" className="button button-primary">
+              Verify Receipt
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
+            <Link to="/" className="button button-secondary button-sm">
+              ← Back Home
+            </Link>
+            <Link to="/admin/receipts" className="button button-secondary button-sm">
+              Admin Receipts Portal
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading && !receipt) {
+    return (
+      <div className="page verify-page">
+        <div className="verify-container glass-panel" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+          <span className="spinner-inline" style={{ width: '28px', height: '28px', margin: '0 auto 1rem', display: 'block' }} />
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600 }}>Verifying Receipt in Cloud Registry...</h2>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
+            Looking up <code style={{ color: 'var(--brand-strong)' }}>{receiptId}</code>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (!receipt) {
     return (
       <div className="page verify-page">
@@ -77,11 +174,11 @@ export function VerifyReceiptPage() {
             No payment receipt matches verification identifier <code style={{ color: 'var(--brand-strong)' }}>{receiptId}</code> in the IoT-Berg registry.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <Link to="/" className="button button-secondary">
-              Back to IoT-Berg Home
+            <Link to="/verify" className="button button-secondary">
+              Search Another Receipt
             </Link>
-            <Link to="/admin/login" className="button button-primary">
-              Admin Login
+            <Link to="/" className="button button-primary">
+              Back to IoT-Berg Home
             </Link>
           </div>
         </div>
@@ -201,7 +298,7 @@ export function VerifyReceiptPage() {
             <div className="receipt-spec-grid">
               <div className="spec-tile">
                 <span className="tile-lbl">Work Order Reference</span>
-                <code className="tile-val-mono">{receipt.workOrderId || 'WO-2026-001'}</code>
+                <code className="tile-val-mono">{receipt.workOrderRef || receipt.workOrderId || 'Contract Attached'}</code>
               </div>
               <div className="spec-tile">
                 <span className="tile-lbl">Payment Purpose</span>
@@ -273,14 +370,23 @@ export function VerifyReceiptPage() {
             <div className="receipt-auth-row">
               <div className="signatory-col">
                 <div className="sign-signature-frame">
-                  {receipt.signatureUrl ? (
-                    <img src={receipt.signatureUrl} alt="Signature" className="auth-sign-img" />
+                  {receipt.signatureUrl || receipt.signatureDataUrl ? (
+                    <img
+                      src={receipt.signatureUrl || receipt.signatureDataUrl}
+                      alt="Authorized Signature"
+                      className="auth-sign-img"
+                      onError={(e) => {
+                        if (receipt.signatureDataUrl && e.currentTarget.src !== receipt.signatureDataUrl) {
+                          e.currentTarget.src = receipt.signatureDataUrl
+                        }
+                      }}
+                    />
                   ) : isPending ? (
                     <div className="auth-sign-digital" style={{ color: '#d97706', borderColor: '#fde68a', background: '#fffbeb' }}>
                       ⏳ Pending Signature Approval
                     </div>
                   ) : (
-                    <div className="auth-sign-digital">MD. Rezaul Karim (Signed)</div>
+                    <div className="auth-sign-digital">{receipt.signatoryName || 'MD. Rezaul Karim'} (Signed)</div>
                   )}
                 </div>
                 <div className="sign-details">

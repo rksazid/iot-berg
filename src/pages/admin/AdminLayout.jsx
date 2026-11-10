@@ -140,16 +140,17 @@ export function AdminLayout() {
               )}
 
               <Link
-                to="/verify/IB-REC-2026-001"
+                to="/verify"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="sidebar-nav-item"
+                title="Open Dynamic Receipt Verification Lookup Portal"
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
-                <span>Public Verification ↗</span>
+                <span>Verify Receipt Portal ↗</span>
               </Link>
 
               <Link to="/" className="sidebar-nav-item">

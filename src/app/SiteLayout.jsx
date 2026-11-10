@@ -161,7 +161,7 @@ export function SiteLayout() {
                 <NavLink to="/admin">Admin Portal</NavLink>
                 <NavLink to="/admin/work-orders">Work Orders</NavLink>
                 <NavLink to="/admin/receipts">Payment Receipts</NavLink>
-                <NavLink to="/verify/IB-REC-2026-001">Verify Advance Receipt</NavLink>
+                <NavLink to="/verify">Verify Receipt</NavLink>
               </div>
 
               <div className="footer-col">

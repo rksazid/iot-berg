@@ -15,17 +15,19 @@ export async function optimizeImage(fileOrDataUrl, options = {}) {
 
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.crossOrigin = 'anonymous'
+    if (typeof fileOrDataUrl === 'string' && /^https?:\/\//i.test(fileOrDataUrl)) {
+      img.crossOrigin = 'anonymous'
+    }
 
     img.onload = () => {
       try {
-        let width = img.naturalWidth || img.width
-        let height = img.naturalHeight || img.height
+        let width = img.naturalWidth || img.width || 300
+        let height = img.naturalHeight || img.height || 120
 
         // Calculate scaling ratio
         const scale = Math.min(1, maxWidth / width, maxHeight / height)
-        const targetWidth = Math.round(width * scale)
-        const targetHeight = Math.round(height * scale)
+        const targetWidth = Math.max(1, Math.round(width * scale))
+        const targetHeight = Math.max(1, Math.round(height * scale))
 
         const canvas = document.createElement('canvas')
         canvas.width = targetWidth

@@ -20,6 +20,9 @@ export function ReceiptsPage() {
 
   useEffect(() => {
     loadReceipts()
+    workOrderStore.syncFromCloud().then(({ receipts: synced }) => {
+      if (Array.isArray(synced)) setReceipts(synced)
+    })
   }, [])
 
   const loadReceipts = () => {
@@ -37,7 +40,7 @@ export function ReceiptsPage() {
           html,
           format: 'A4',
           printBackground: true,
-          margin: { top: '10mm', right: '12mm', bottom: '10mm', left: '12mm' },
+          margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
         },
       })
 
@@ -68,9 +71,9 @@ export function ReceiptsPage() {
     }
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm(`Are you sure you want to delete receipt ${id}?`)) {
-      workOrderStore.deleteReceipt(id)
+      await workOrderStore.deleteReceiptAsync(id)
       loadReceipts()
     }
   }
@@ -216,7 +219,10 @@ export function ReceiptsPage() {
                   <tr key={rec.id}>
                     <td>
                       <strong className="mono-ref">{rec.receiptNumber || rec.id}</strong>
-                      <span className="sign-author-sub">By {rec.signatoryName}</span>
+                      <span className="sign-author-sub">
+                        By {rec.signatoryName}
+                        {rec.signatureUrl || rec.signatureDataUrl ? ' · Signed ✓' : ''}
+                      </span>
                     </td>
                     <td>
                       <span className="date-sub">{rec.receiptDate || rec.paymentDate}</span>
@@ -227,7 +233,7 @@ export function ReceiptsPage() {
                     </td>
                     <td>
                       <div className="table-scope-cell">
-                        <strong className="mono-ref-sm">{rec.workOrderId || 'WO-2026-001'}</strong>
+                        <strong className="mono-ref-sm">{rec.workOrderRef || rec.workOrderId || 'Standalone'}</strong>
                         <p>{rec.projectName}</p>
                       </div>
                     </td>

@@ -1,129 +1,235 @@
-import { formatCurrencyBDT, numberToWordsBDT } from './numberToWords.js'
+import { numberToWordsBDT } from './numberToWords.js'
 import { generateQrDataUrl } from './qrCode.js'
 
 /**
- * Compiles a pixel-perfect, standards-compliant HTML document for the official payment receipt.
- * Optimized for A4 printing and sub-second compilation through the pdf-lagbe Chromium rendering engine.
+ * PDF-safe currency formatting using 'BDT ' prefix so headless Linux Chromium
+ * never renders missing-glyph tofu boxes for the Unicode Taka sign (৳).
+ */
+function formatPdfBDT(amount) {
+  const num = Number(amount) || 0
+  return `BDT ${num.toLocaleString('en-IN')}`
+}
+
+/**
+ * Truncates long free-form strings so any dynamic content stays cleanly within
+ * a single A4 receipt page without spilling onto page 2.
+ */
+function clampText(text, maxChars = 140) {
+  if (!text) return ''
+  const normalized = String(text).replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxChars) return normalized
+  return `${normalized.slice(0, maxChars - 1).trimEnd()}…`
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Converts a remote signature URL (e.g. Vercel Blob) into an inline data: URI
+ * so headless Chromium in pdf-lagbe renders the signature immediately with zero
+ * network fetch race conditions.
+ */
+async function resolveSignatureDataUri(signatureUrl, signatureDataUrl) {
+  if (signatureUrl && /^data:image\//i.test(signatureUrl)) {
+    return signatureUrl
+  }
+  if (signatureUrl && /^https?:\/\//i.test(signatureUrl)) {
+    try {
+      const response = await fetch(signatureUrl)
+      if (response.ok) {
+        const mime = response.headers.get('content-type') || 'image/png'
+        if (typeof Buffer !== 'undefined') {
+          const buf = Buffer.from(await response.arrayBuffer())
+          return `data:${mime};base64,${buf.toString('base64')}`
+        }
+        const blob = await response.blob()
+        const dataUri = await new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result)
+          reader.onerror = () => reject(new Error('Failed to read signature blob'))
+          reader.readAsDataURL(blob)
+        })
+        if (typeof dataUri === 'string' && dataUri.startsWith('data:')) {
+          return dataUri
+        }
+      }
+    } catch (err) {
+      console.warn('Signature inline conversion fallback:', err.message)
+    }
+  }
+  if (signatureDataUrl && /^data:image\//i.test(signatureDataUrl)) {
+    return signatureDataUrl
+  }
+  return signatureUrl || ''
+}
+
+/**
+ * Compiles a single-page A4 HTML document for the official payment receipt.
+ * Designed with strict vertical budget + content clamping so it NEVER splits to 2 pages.
  */
 export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.vercel.app') {
-  const verifyUrl = `${origin}/verify/${encodeURIComponent(receipt.id || receipt.receiptNumber)}`
-  const qrDataUrl = await generateQrDataUrl(verifyUrl, { width: 180, margin: 1 })
+  const receiptRef = receipt.receiptNumber || receipt.id
+  const verifyUrl = `${origin}/verify/${encodeURIComponent(receiptRef)}`
+  const [qrDataUrl, resolvedSignatureSrc] = await Promise.all([
+    generateQrDataUrl(verifyUrl, { width: 150, margin: 1 }),
+    resolveSignatureDataUri(receipt.signatureUrl, receipt.signatureDataUrl),
+  ])
 
-  const formattedAmount = formatCurrencyBDT(receipt.amount)
-  const amountWords = receipt.amountInWords || numberToWordsBDT(receipt.amount)
+  const formattedAmount = formatPdfBDT(receipt.amount)
+  const amountWords = clampText(
+    receipt.amountInWords || numberToWordsBDT(receipt.amount),
+    105,
+  )
   const formattedTotal = receipt.totalContractValue
-    ? formatCurrencyBDT(receipt.totalContractValue)
+    ? formatPdfBDT(receipt.totalContractValue)
     : '—'
   const formattedBalance = receipt.balanceRemaining != null
-    ? formatCurrencyBDT(receipt.balanceRemaining)
+    ? formatPdfBDT(receipt.balanceRemaining)
     : '—'
 
-  const coreVal = receipt.coreContractValue != null ? receipt.coreContractValue : 350000
-  const serverCharge = receipt.serverCharge != null ? receipt.serverCharge : 60000
-  const serverPeriod = receipt.serverPeriod || '1 Year'
-  const maintenanceCharge = receipt.maintenanceCharge != null ? receipt.maintenanceCharge : 40000
-  const maintenancePeriod = receipt.maintenancePeriod || '1 Year'
-  const totalAdditional = serverCharge + maintenanceCharge + (receipt.otherAdditionalCharge || 0)
-  const formattedCore = formatCurrencyBDT(coreVal)
-  const formattedServer = formatCurrencyBDT(serverCharge)
-  const formattedMaintenance = formatCurrencyBDT(maintenanceCharge)
-  const formattedAdditional = formatCurrencyBDT(totalAdditional)
+  const coreVal = receipt.coreContractValue != null ? Number(receipt.coreContractValue) : 450000
+  const serverCharge = receipt.serverCharge != null ? Number(receipt.serverCharge) : 0
+  const serverPeriod = clampText(receipt.serverPeriod || '1 Year', 24)
+  const maintenanceCharge = receipt.maintenanceCharge != null ? Number(receipt.maintenanceCharge) : 0
+  const maintenancePeriod = clampText(receipt.maintenancePeriod || '1 Year', 24)
+  const totalAdditional =
+    serverCharge + maintenanceCharge + (Number(receipt.otherAdditionalCharge) || 0)
+
+  const formattedCore = formatPdfBDT(coreVal)
+  const formattedServer = formatPdfBDT(serverCharge)
+  const formattedMaintenance = formatPdfBDT(maintenanceCharge)
+  const formattedAdditional = formatPdfBDT(totalAdditional)
   const hasAdditional = totalAdditional > 0
+
+  const isPending = receipt.status === 'pending_approval'
+  const clientNameSafe = escapeHtml(clampText(receipt.clientName || 'Valued Client', 70))
+  const clientContactSafe = escapeHtml(clampText(receipt.clientContactPerson || '', 65))
+  const clientEmailSafe = escapeHtml(clampText(receipt.clientEmail || '', 55))
+  const clientAddressSafe = escapeHtml(clampText(receipt.clientAddress || '', 85))
+  const workOrderSafe = escapeHtml(
+    clampText(receipt.workOrderRef || receipt.workOrderId || 'Contract Attached', 40),
+  )
+  const projectNameSafe = escapeHtml(
+    clampText(receipt.projectName || 'Engineering Services', 85),
+  )
+  const paymentHeadSafe = escapeHtml(
+    clampText(receipt.paymentHead || receipt.paymentCategory || 'Work Order Payment', 60),
+  )
+  const paymentModeSafe = escapeHtml(clampText(receipt.paymentMode || 'Cash', 30))
+  const txNoteSafe = escapeHtml(
+    clampText(
+      receipt.transactionNote || 'Payment received against authorized engineering work order.',
+      195,
+    ),
+  )
+  const signatoryNameSafe = escapeHtml(clampText(receipt.signatoryName || 'MD. Rezaul Karim', 50))
+  const signatoryRoleSafe = escapeHtml(
+    clampText(receipt.signatoryRole || 'Project Manager & Team Lead', 55),
+  )
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Receipt — ${receipt.receiptNumber || receipt.id}</title>
+  <title>Payment Receipt — ${escapeHtml(receiptRef)}</title>
   <style>
     @page {
       size: A4 portrait;
-      margin: 12mm 14mm 12mm 14mm;
+      margin: 8mm 10mm;
     }
     *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    body {
+    html, body {
+      width: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #0f172a;
       background: #ffffff;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 11.5px;
+      line-height: 1.38;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .receipt-container {
       width: 100%;
-      max-width: 800px;
+      max-width: 780px;
       margin: 0 auto;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 24px 28px;
-      position: relative;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 15px 18px;
       background: #ffffff;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .top-banner {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 2px solid #0f766e;
-      padding-bottom: 18px;
-      margin-bottom: 20px;
+      padding-bottom: 10px;
+      margin-bottom: 11px;
     }
     .brand-col {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
     .company-title {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 800;
       color: #0f766e;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
       text-transform: uppercase;
+      line-height: 1.1;
     }
     .company-subtitle {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 9.5px;
+      font-weight: 700;
       color: #475569;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
     }
     .company-contact {
-      font-size: 11px;
+      font-size: 10px;
       color: #64748b;
-      margin-top: 4px;
-      line-height: 1.4;
+      margin-top: 2px;
+      line-height: 1.35;
     }
     .meta-col {
       text-align: right;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 4px;
+      gap: 3px;
     }
     .doc-badge {
       display: inline-block;
       background: #0f766e;
       color: #ffffff;
       font-weight: 700;
-      font-size: 12px;
-      padding: 4px 12px;
+      font-size: 10.5px;
+      padding: 3px 10px;
       border-radius: 999px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .receipt-id {
       font-family: monospace;
-      font-size: 15px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #0f172a;
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .receipt-date {
-      font-size: 11.5px;
+      font-size: 10.5px;
       color: #64748b;
       font-weight: 500;
     }
@@ -131,12 +237,12 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 700;
-      color: #059669;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      padding: 2px 8px;
+      color: ${isPending ? '#b45309' : '#059669'};
+      background: ${isPending ? '#fef3c7' : '#ecfdf5'};
+      border: 1px solid ${isPending ? '#fde68a' : '#a7f3d0'};
+      padding: 2px 7px;
       border-radius: 4px;
       text-transform: uppercase;
     }
@@ -144,28 +250,29 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       background: #f0fdfa;
       border: 1.5px solid #5eead4;
       border-radius: 8px;
-      padding: 16px 20px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 22px;
+      margin-bottom: 11px;
     }
     .amount-left strong {
       display: block;
-      font-size: 11px;
+      font-size: 9.5px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: #0d9488;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .amount-left .amount-num {
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 800;
       color: #0f766e;
       font-family: monospace;
+      line-height: 1.15;
     }
     .amount-left .amount-words {
-      font-size: 12px;
+      font-size: 10.5px;
       font-style: italic;
       color: #334155;
       margin-top: 2px;
@@ -177,39 +284,43 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       display: inline-block;
       background: #ffffff;
       border: 1px solid #cbd5e1;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: #0f172a;
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 6px;
     }
     .grid-2col {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
+      gap: 11px;
+      margin-bottom: 11px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .info-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 14px 16px;
+      border-radius: 7px;
+      padding: 9px 11px;
     }
     .box-heading {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       color: #64748b;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
       border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 4px;
+      padding-bottom: 3px;
     }
     .info-line {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 5px;
-      font-size: 12px;
+      gap: 8px;
+      margin-bottom: 3px;
+      font-size: 10.5px;
+      line-height: 1.32;
     }
     .info-line:last-child {
       margin-bottom: 0;
@@ -217,48 +328,95 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     .info-label {
       color: #64748b;
       font-weight: 500;
+      white-space: nowrap;
     }
     .info-value {
       color: #0f172a;
       font-weight: 600;
       text-align: right;
-      max-width: 65%;
       word-break: break-word;
     }
     .details-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
-      font-size: 12px;
+      margin-bottom: 10px;
+      font-size: 10.5px;
     }
     .details-table th {
       background: #f1f5f9;
       color: #475569;
       font-weight: 700;
       text-align: left;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border: 1px solid #e2e8f0;
-      font-size: 11px;
+      font-size: 9.5px;
       text-transform: uppercase;
     }
     .details-table td {
-      padding: 10px 12px;
+      padding: 7px 10px;
       border: 1px solid #e2e8f0;
       color: #1e293b;
+      vertical-align: top;
+    }
+    .addons-panel {
+      margin-bottom: 10px;
+      padding: 7px 10px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 6px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .addons-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .addons-title {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      color: #1e293b;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+    }
+    .addons-badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #4338ca;
+      background: #e0e7ff;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .addons-table {
+      width: 100%;
+      font-size: 10px;
+      color: #334155;
+      border-collapse: collapse;
+    }
+    .addons-note {
+      font-size: 9px;
+      color: #64748b;
+      margin-top: 3px;
+      font-style: italic;
+      border-top: 1px dotted #e2e8f0;
+      padding-top: 3px;
     }
     .verification-strip {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       background: #f8fafc;
       border: 1px dashed #cbd5e1;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 24px;
+      border-radius: 7px;
+      padding: 8px 11px;
+      margin-bottom: 12px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .qr-img {
-      width: 80px;
-      height: 80px;
+      width: 62px;
+      height: 62px;
       border: 1px solid #e2e8f0;
       border-radius: 4px;
       background: #ffffff;
@@ -266,20 +424,20 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       flex-shrink: 0;
     }
     .qr-copy strong {
-      font-size: 12px;
+      font-size: 10.5px;
       color: #0f172a;
       display: block;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .qr-copy p {
-      font-size: 11px;
+      font-size: 9.5px;
       color: #64748b;
-      line-height: 1.4;
-      margin-bottom: 4px;
+      line-height: 1.32;
+      margin-bottom: 2px;
     }
     .qr-copy .verify-url {
       font-family: monospace;
-      font-size: 10px;
+      font-size: 9px;
       color: #0f766e;
       word-break: break-all;
     }
@@ -287,69 +445,73 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-top: 30px;
-      padding-top: 15px;
+      margin-top: 10px;
+      padding-top: 4px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .sign-box {
-      width: 45%;
+      width: 44%;
       text-align: center;
     }
     .signature-media {
-      height: 55px;
+      height: 46px;
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .signature-img {
-      max-height: 55px;
-      max-width: 180px;
+      max-height: 44px;
+      max-width: 165px;
+      width: auto;
+      height: auto;
       object-fit: contain;
     }
     .digital-seal-svg {
       display: inline-block;
       font-family: monospace;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       color: #0f766e;
       border-bottom: 1.5px dashed #0f766e;
-      padding-bottom: 4px;
+      padding-bottom: 3px;
     }
     .sign-line {
       border-top: 1px solid #94a3b8;
-      padding-top: 6px;
+      padding-top: 5px;
     }
     .sign-name {
-      font-size: 12.5px;
+      font-size: 11px;
       font-weight: 700;
       color: #0f172a;
     }
     .sign-title {
-      font-size: 11px;
+      font-size: 9.5px;
       color: #64748b;
     }
     .official-seal {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 10px;
+      gap: 5px;
+      font-size: 9px;
       font-weight: 700;
       color: #0f766e;
-      border: 1.5px solid #0f766e;
-      padding: 3px 8px;
+      border: 1px solid #0f766e;
+      padding: 2px 7px;
       border-radius: 4px;
-      margin-top: 4px;
+      margin-top: 3px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
     .footer-note {
       text-align: center;
-      font-size: 10px;
+      font-size: 8.8px;
       color: #94a3b8;
-      margin-top: 24px;
+      margin-top: 10px;
       border-top: 1px solid #f1f5f9;
-      padding-top: 12px;
-      line-height: 1.4;
+      padding-top: 7px;
+      line-height: 1.3;
     }
   </style>
 </head>
@@ -361,16 +523,16 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
         <h1 class="company-title">IoT-Berg</h1>
         <div class="company-subtitle">Engineering · Developer APIs · Cloud Systems</div>
         <div class="company-contact">
-          Technical Direction: MD. Rezaul Karim (Project Manager & Team Lead)<br>
-          Web: https://iot-berg.vercel.app · Contact: rksazid@gmail.com
+          Technical Direction: MD. Rezaul Karim (${signatoryRoleSafe})<br>
+          Web: https://iot-berg.vercel.app · Contact: ${escapeHtml(receipt.signatoryEmail || 'rksazid@gmail.com')}
         </div>
       </div>
       <div class="meta-col">
         <div class="doc-badge">Money Receipt</div>
-        <div class="receipt-id">${receipt.receiptNumber || receipt.id}</div>
-        <div class="receipt-date">Date: ${receipt.receiptDate || receipt.paymentDate}</div>
+        <div class="receipt-id">${escapeHtml(receiptRef)}</div>
+        <div class="receipt-date">Date: ${escapeHtml(receipt.receiptDate || receipt.paymentDate)}</div>
         <div class="status-pill">
-          ✓ Verified & Authorized
+          ${isPending ? '⏳ Pending Signature' : '✓ Verified & Authorized'}
         </div>
       </div>
     </div>
@@ -380,11 +542,11 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       <div class="amount-left">
         <strong>Received Payment Amount</strong>
         <div class="amount-num">${formattedAmount}</div>
-        <div class="amount-words">In Words: ${amountWords}</div>
+        <div class="amount-words">In Words: ${escapeHtml(amountWords)}</div>
       </div>
       <div class="amount-right">
-        <div class="payment-mode-pill">${receipt.paymentMode || 'Cash'} Receipt</div>
-        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">${receipt.paymentHead || receipt.paymentCategory || 'Payment Voucher'}</div>
+        <div class="payment-mode-pill">${paymentModeSafe} Receipt</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 3px;">${paymentHeadSafe}</div>
       </div>
     </div>
 
@@ -394,29 +556,29 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
         <div class="box-heading">Received From (Client)</div>
         <div class="info-line">
           <span class="info-label">Company:</span>
-          <span class="info-value">${receipt.clientName || 'Valued Client'}</span>
+          <span class="info-value">${clientNameSafe}</span>
         </div>
         ${
-          receipt.clientContactPerson
+          clientContactSafe
             ? `<div class="info-line">
                 <span class="info-label">Contact:</span>
-                <span class="info-value">${receipt.clientContactPerson}</span>
+                <span class="info-value">${clientContactSafe}</span>
               </div>`
             : ''
         }
         ${
-          receipt.clientEmail
+          clientEmailSafe
             ? `<div class="info-line">
                 <span class="info-label">Email:</span>
-                <span class="info-value">${receipt.clientEmail}</span>
+                <span class="info-value">${clientEmailSafe}</span>
               </div>`
             : ''
         }
         ${
-          receipt.clientAddress
+          clientAddressSafe
             ? `<div class="info-line">
                 <span class="info-label">Address:</span>
-                <span class="info-value">${receipt.clientAddress}</span>
+                <span class="info-value">${clientAddressSafe}</span>
               </div>`
             : ''
         }
@@ -426,11 +588,11 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
         <div class="box-heading">Project & Financial Breakdown</div>
         <div class="info-line">
           <span class="info-label">Work Order Ref:</span>
-          <span class="info-value" style="font-family: monospace;">${receipt.workOrderId || 'WO-2026-001'}</span>
+          <span class="info-value" style="font-family: monospace;">${workOrderSafe}</span>
         </div>
         <div class="info-line">
           <span class="info-label">Project Scope:</span>
-          <span class="info-value">${receipt.projectName || 'Engineering Services'}</span>
+          <span class="info-value">${projectNameSafe}</span>
         </div>
         <div class="info-line">
           <span class="info-label">Core Engineering:</span>
@@ -450,7 +612,7 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
         </div>
         <div class="info-line">
           <span class="info-label">Remaining Balance:</span>
-          <span class="info-value" style="color: #b91c1c; font-weight: 600;">${formattedBalance}</span>
+          <span class="info-value" style="color: #b91c1c; font-weight: 700;">${formattedBalance}</span>
         </div>
       </div>
     </div>
@@ -459,21 +621,19 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     <table class="details-table">
       <thead>
         <tr>
-          <th style="width: 55%;">Description / Milestone Particulars</th>
-          <th style="width: 25%;">Payment Category</th>
+          <th style="width: 56%;">Description / Milestone Particulars</th>
+          <th style="width: 24%;">Payment Category</th>
           <th style="width: 20%; text-align: right;">Amount Paid</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>
-            <strong>${receipt.paymentCategory || 'Work Order Advance Payment'}</strong><br>
-            <span style="color: #64748b; font-size: 11px;">
-              ${receipt.transactionNote || 'Advance payment received in cash for project commencement.'}
-            </span>
+            <strong>${paymentHeadSafe}</strong><br>
+            <span style="color: #64748b; font-size: 9.8px;">${txNoteSafe}</span>
           </td>
-          <td>${receipt.paymentMode || 'Cash'} · ${receipt.paymentHead || receipt.paymentCategory || 'Project Payment'}</td>
-          <td style="text-align: right; font-weight: 700; font-family: monospace; font-size: 13px;">
+          <td>${paymentModeSafe} · ${paymentHeadSafe}</td>
+          <td style="text-align: right; font-weight: 700; font-family: monospace; font-size: 11.5px;">
             ${formattedAmount}
           </td>
         </tr>
@@ -482,30 +642,25 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
 
     ${
       hasAdditional
-        ? `<!-- Distinct Operational Add-ons Section -->
-        <div style="margin-top: 12px; margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <strong style="font-size: 11px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
-              Additional Operational Services (Separate from Core Project Deliverables)
-            </strong>
-            <span style="font-size: 10px; font-weight: 700; color: #4338ca; background: #e0e7ff; padding: 2px 6px; border-radius: 4px;">
-              Total: ${formattedAdditional}
-            </span>
-          </div>
-          <table style="width: 100%; font-size: 11px; color: #334155; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 2px 0;">• <strong>Managed Server & Cloud Infrastructure:</strong> ${formattedServer}</td>
-              <td style="text-align: right; color: #64748b;">Allocation: ${serverPeriod} Cloud Hosting & Storage</td>
-            </tr>
-            <tr>
-              <td style="padding: 2px 0;">• <strong>Software Maintenance & Security SLA:</strong> ${formattedMaintenance}</td>
-              <td style="text-align: right; color: #64748b;">Allocation: ${maintenancePeriod} Security Patches & Uptime SLA</td>
-            </tr>
-          </table>
-          <div style="font-size: 10px; color: #64748b; margin-top: 5px; font-style: italic; border-top: 1px dotted #e2e8f0; padding-top: 4px;">
-            * Important Note: Server management and software maintenance charges are additional operational allocations distinct from base software engineering deliverables.
-          </div>
-        </div>`
+        ? `<div class="addons-panel">
+            <div class="addons-header">
+              <span class="addons-title">Additional Operational Services (Separate from Core Project Deliverables)</span>
+              <span class="addons-badge">Total: ${formattedAdditional}</span>
+            </div>
+            <table class="addons-table">
+              <tr>
+                <td style="padding: 1px 0;">• <strong>Managed Server &amp; Cloud Infrastructure:</strong> ${formattedServer}</td>
+                <td style="text-align: right; color: #64748b;">${serverPeriod} Cloud Hosting &amp; Storage</td>
+              </tr>
+              <tr>
+                <td style="padding: 1px 0;">• <strong>Software Maintenance &amp; Security SLA:</strong> ${formattedMaintenance}</td>
+                <td style="text-align: right; color: #64748b;">${maintenanceCharge === 0 ? 'Bundled within yearly SLA fee' : `${maintenancePeriod} Security Patches &amp; Uptime SLA`}</td>
+              </tr>
+            </table>
+            <div class="addons-note">
+              * Note: Server management and software maintenance charges are operational allocations separate from core software engineering deliverables.
+            </div>
+          </div>`
         : ''
     }
 
@@ -513,11 +668,11 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     <div class="verification-strip">
       <img src="${qrDataUrl}" alt="Online Verification QR Code" class="qr-img">
       <div class="qr-copy">
-        <strong>Online Digital Verification & Authenticity Proof</strong>
+        <strong>Online Digital Verification &amp; Authenticity Proof</strong>
         <p>
-          Scan this QR code with any smartphone camera to verify the genuine authenticity of this payment receipt on the IoT-Berg cloud verification registry.
+          Scan this QR code with any smartphone camera to dynamically verify the authenticity of this payment receipt on the IoT-Berg cloud registry.
         </p>
-        <div class="verify-url">${verifyUrl}</div>
+        <div class="verify-url">${escapeHtml(verifyUrl)}</div>
       </div>
     </div>
 
@@ -525,10 +680,10 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
     <div class="sign-row">
       <div class="sign-box">
         <div class="signature-media">
-          <span style="font-size: 11px; color: #94a3b8; font-style: italic;">Authorized Handover</span>
+          <span style="font-size: 10px; color: #94a3b8; font-style: italic;">Authorized Handover</span>
         </div>
         <div class="sign-line">
-          <div class="sign-name">${receipt.clientContactPerson || receipt.clientName || 'Client Representative'}</div>
+          <div class="sign-name">${clientContactSafe || clientNameSafe}</div>
           <div class="sign-title">Payer / Authorized Signature</div>
         </div>
       </div>
@@ -536,18 +691,18 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
       <div class="sign-box">
         <div class="signature-media">
           ${
-            receipt.signatureUrl
-              ? `<img src="${receipt.signatureUrl}" alt="Authorized Signature" class="signature-img">`
-              : receipt.status === 'pending_approval'
+            resolvedSignatureSrc
+              ? `<img src="${resolvedSignatureSrc}" alt="Authorized Signature" class="signature-img">`
+              : isPending
               ? `<div class="digital-seal-svg" style="color: #d97706; border-color: #fde68a;">DRAFT · Awaiting Signature</div>`
-              : `<div class="digital-seal-svg">MD. Rezaul Karim (Digitally Signed)</div>`
+              : `<div class="digital-seal-svg">${signatoryNameSafe} (Digitally Signed)</div>`
           }
         </div>
         <div class="sign-line">
-          <div class="sign-name">${receipt.signatoryName || 'MD. Rezaul Karim'}</div>
-          <div class="sign-title">${receipt.signatoryRole || 'Project Manager & Team Lead'}</div>
+          <div class="sign-name">${signatoryNameSafe}</div>
+          <div class="sign-title">${signatoryRoleSafe}</div>
           ${
-            receipt.status === 'pending_approval'
+            isPending
               ? `<div class="official-seal" style="color: #d97706; border-color: #fde68a; background: #fffbeb;">⏳ Pending Signature Approval</div>`
               : receipt.sealEnabled !== false
               ? `<div class="official-seal">★ IoT-Berg Verified Official ★</div>`
@@ -559,11 +714,10 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
 
     <!-- Footer Security Note -->
     <div class="footer-note">
-      This is a system-generated official payment receipt issued by Team IoT-Berg Engineering. Ephemeral PDF rendering executed via pdf-lagbe engine.<br>
-      Integrity Hash: <code>${receipt.verificationHash || 'ib_verified_sha256'}</code> · Verification valid indefinitely.
+      System-generated official payment receipt issued by Team IoT-Berg Engineering · Rendered via pdf-lagbe.<br>
+      Integrity Hash: <code>${escapeHtml(receipt.verificationHash || 'ib_verified_sha256')}</code>
     </div>
   </div>
 </body>
 </html>`
 }
-

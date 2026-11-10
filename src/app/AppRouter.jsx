@@ -24,6 +24,7 @@ export function AppRouter() {
         <Route path="/convert/:tool" element={<ConvertPage />} />
 
         {/* Public Money Receipt Online Verification Portal */}
+        <Route path="/verify" element={<VerifyReceiptPage />} />
         <Route path="/verify/:receiptId" element={<VerifyReceiptPage />} />
 
         {/* Legacy routes redirect into the unified converter workspace */}

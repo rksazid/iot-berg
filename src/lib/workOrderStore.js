@@ -1,7 +1,36 @@
 import { numberToWordsBDT } from './numberToWords.js'
 
-const WO_STORAGE_KEY = 'iotberg_work_orders_v3'
-const REC_STORAGE_KEY = 'iotberg_payment_receipts_v3'
+const WO_STORAGE_KEY = 'iotberg_work_orders_v4'
+const REC_STORAGE_KEY = 'iotberg_payment_receipts_v4'
+
+// Safe, non-revealing reference number generator (YYMM + 4-char opaque alphanumeric code)
+const SAFE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+export function generateNonRevealingId(prefix = 'IB-REC', existingIds = []) {
+  const now = new Date()
+  const yy = String(now.getFullYear()).slice(-2)
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    let suffix = ''
+    for (let i = 0; i < 4; i += 1) {
+      suffix += SAFE_ALPHABET.charAt(Math.floor(Math.random() * SAFE_ALPHABET.length))
+    }
+    const candidate = `${prefix}-${yy}${mm}-${suffix}`
+    if (!existingIds.includes(candidate)) {
+      return candidate
+    }
+  }
+  return `${prefix}-${yy}${mm}-${Date.now().toString(36).slice(-4).toUpperCase()}`
+}
+
+export function generateWorkOrderRef(existingIds = []) {
+  return generateNonRevealingId('IB-WO', existingIds)
+}
+
+export function generateReceiptNumber(existingIds = []) {
+  return generateNonRevealingId('IB-REC', existingIds)
+}
 
 const INITIAL_WORK_ORDERS = [
   {
@@ -59,8 +88,8 @@ const INITIAL_WORK_ORDERS = [
 
 const INITIAL_RECEIPTS = [
   {
-    id: 'IB-REC-2026-001',
-    receiptNumber: 'IB-REC-2026-001',
+    id: 'IB-REC-2611-7C4N',
+    receiptNumber: 'IB-REC-2611-7C4N',
     workOrderId: 'SIIL-A10003',
     workOrderRef: 'SIIL - A10003',
     clientName: 'Sazin Innovative Industries Ltd.',
@@ -90,6 +119,7 @@ const INITIAL_RECEIPTS = [
     signatoryCompany: 'IoT-Berg Engineering',
     signatoryEmail: 'rksazid@gmail.com',
     signatureUrl: null,
+    signatureDataUrl: null,
     sealEnabled: true,
     status: 'pending_approval',
     verificationHash: '9a4f8b2c1e7d0356ae29c54f8b190a3d4e7f81b0c3d2e5f6a7b8c9d0e1f2a3b4',
@@ -130,13 +160,106 @@ function persist(key, data) {
   }
 }
 
+async function postRegistryAction(payload) {
+  if (typeof window === 'undefined' || typeof fetch !== 'function') {
+    return null
+  }
+  try {
+    const res = await fetch('/api/registry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        seed: {
+          workOrders: INITIAL_WORK_ORDERS,
+          receipts: INITIAL_RECEIPTS,
+        },
+      }),
+    })
+    if (!res.ok) return null
+    return await res.json()
+  } catch (err) {
+    console.warn('Cloud registry sync warning:', err.message)
+    return null
+  }
+}
+
 export const workOrderStore = {
+  /**
+   * Synchronize local cache with cloud Vercel Blob registry (/api/registry).
+   */
+  async syncFromCloud() {
+    if (typeof window === 'undefined' || typeof fetch !== 'function') {
+      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+    }
+    try {
+      const res = await fetch('/api/registry', { cache: 'no-store' })
+      if (!res.ok) {
+        return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+      }
+      const data = await res.json()
+      if (data.initialized && Array.isArray(data.workOrders) && Array.isArray(data.receipts)) {
+        persist(WO_STORAGE_KEY, data.workOrders)
+        persist(REC_STORAGE_KEY, data.receipts)
+        return { workOrders: this.getWorkOrders(), receipts: this.getReceipts(), synced: true }
+      }
+      // Registry is empty on cloud -> seed it with initial data cleanly
+      const localWos = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
+      const localRecs = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
+      await postRegistryAction({
+        action: 'bootstrap',
+        workOrders: localWos,
+        receipts: localRecs,
+      })
+      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts(), bootstrapped: true }
+    } catch (err) {
+      console.warn('Cloud sync skipped:', err.message)
+      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+    }
+  },
+
+  /**
+   * Dynamic single-receipt fetch from cloud registry (falls back cleanly to local storage).
+   */
+  async fetchReceiptById(id) {
+    if (!id) return null
+    if (typeof window !== 'undefined' && typeof fetch === 'function') {
+      try {
+        const res = await fetch(`/api/registry?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.receipt) {
+            // Merge into local cache
+            const current = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
+            const idx = current.findIndex(
+              (r) => r.id === data.receipt.id || r.receiptNumber === data.receipt.receiptNumber,
+            )
+            if (idx >= 0) {
+              current[idx] = data.receipt
+            } else {
+              current.unshift(data.receipt)
+            }
+            persist(REC_STORAGE_KEY, current)
+            return data.receipt
+          }
+        } else if (res.status === 404) {
+          const body = await res.json().catch(() => null)
+          if (body?.initialized) {
+            return this.getReceipt(id)
+          }
+        }
+      } catch (err) {
+        console.warn('Dynamic receipt lookup fallback to local:', err.message)
+      }
+    }
+    return this.getReceipt(id)
+  },
+
   getWorkOrders() {
     const rawOrders = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
     const receipts = this.getReceipts()
 
     return rawOrders.map((wo) => {
-      // Find all payments linked to this work order (matching id or workOrderRef)
       const woNormId = (wo.id || '').replace(/\s+/g, '').toLowerCase()
       const woNormRef = (wo.workOrderRef || '').replace(/\s+/g, '').toLowerCase()
 
@@ -193,21 +316,15 @@ export const workOrderStore = {
     })
   },
 
-  saveWorkOrder(workOrderData) {
+  _prepareWorkOrder(workOrderData) {
     const all = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
     const now = new Date().toISOString()
 
+    const coreVal = Number(workOrderData.coreContractValue) || Number(workOrderData.contractValue) || 0
     const serverCharge = Number(workOrderData.serverCharge) || 0
     const maintenanceCharge = Number(workOrderData.maintenanceCharge) || 0
     const otherAdditionalCharge = Number(workOrderData.otherAdditionalCharge) || 0
     const totalAdditionalCharges = serverCharge + maintenanceCharge + otherAdditionalCharge
-
-    let coreVal = Number(workOrderData.coreContractValue)
-    if (isNaN(coreVal) || coreVal <= 0) {
-      const fallbackTotal = Number(workOrderData.contractValue) || 480000
-      coreVal = Math.max(0, fallbackTotal - totalAdditionalCharges)
-    }
-
     const contractVal = coreVal + totalAdditionalCharges
 
     const existingIndex = all.findIndex((item) => item.id === workOrderData.id)
@@ -231,11 +348,12 @@ export const workOrderStore = {
       }
       all[existingIndex] = savedItem
     } else {
-      const generatedId =
-        workOrderData.id || `SIIL-${new Date().getFullYear()}-${String(all.length + 1).padStart(3, '0')}`
+      const existingIds = all.map((item) => item.id)
+      const generatedId = workOrderData.id || generateWorkOrderRef(existingIds)
       savedItem = {
         ...workOrderData,
         id: generatedId,
+        workOrderRef: workOrderData.workOrderRef || generatedId,
         coreContractValue: coreVal,
         serverCharge,
         serverPeriod: workOrderData.serverPeriod || '1 Year',
@@ -257,9 +375,29 @@ export const workOrderStore = {
     return savedItem
   },
 
+  saveWorkOrder(workOrderData) {
+    const savedItem = this._prepareWorkOrder(workOrderData)
+    postRegistryAction({ action: 'saveWorkOrder', workOrder: savedItem })
+    return savedItem
+  },
+
+  async saveWorkOrderAsync(workOrderData) {
+    const savedItem = this._prepareWorkOrder(workOrderData)
+    await postRegistryAction({ action: 'saveWorkOrder', workOrder: savedItem })
+    return savedItem
+  },
+
   deleteWorkOrder(id) {
     const all = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS).filter((item) => item.id !== id)
     persist(WO_STORAGE_KEY, all)
+    postRegistryAction({ action: 'deleteWorkOrder', id })
+    return true
+  },
+
+  async deleteWorkOrderAsync(id) {
+    const all = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS).filter((item) => item.id !== id)
+    persist(WO_STORAGE_KEY, all)
+    await postRegistryAction({ action: 'deleteWorkOrder', id })
     return true
   },
 
@@ -281,7 +419,7 @@ export const workOrderStore = {
     )
   },
 
-  saveReceipt(receiptData) {
+  _prepareReceipt(receiptData) {
     const all = this.getReceipts()
     const now = new Date().toISOString()
 
@@ -312,12 +450,12 @@ export const workOrderStore = {
       ? Number(receiptData.totalContractValue)
       : coreVal + totalAdditionalCharges
 
-    // Compute previous payments for this work order to calculate correct remaining balance
     const otherReceiptsForWo = linkedWo
       ? all.filter(
           (r) =>
             (r.workOrderId === linkedWo.id || r.workOrderId === linkedWo.workOrderRef) &&
             r.id !== receiptData.id &&
+            r.receiptNumber !== receiptData.receiptNumber &&
             r.status !== 'revoked',
         )
       : []
@@ -362,6 +500,10 @@ export const workOrderStore = {
           receiptData.signatureUrl !== undefined
             ? receiptData.signatureUrl
             : all[existingIndex].signatureUrl,
+        signatureDataUrl:
+          receiptData.signatureDataUrl !== undefined
+            ? receiptData.signatureDataUrl
+            : all[existingIndex].signatureDataUrl,
         updatedAt: now,
       }
       if (savedItem.status === 'verified' && !savedItem.approvedAt) {
@@ -369,11 +511,9 @@ export const workOrderStore = {
       }
       all[existingIndex] = savedItem
     } else {
-      const generatedId =
-        receiptData.id ||
-        `IB-REC-${new Date().getFullYear()}-${String(all.length + 1).padStart(3, '0')}`
+      const existingIds = all.map((item) => item.id)
+      const generatedId = receiptData.id || generateReceiptNumber(existingIds)
 
-      // Generate a mock SHA-256 verification signature
       const randomSeed = Math.random().toString(36).substring(2, 15)
       const hash = `ib_${Date.now().toString(16)}_${randomSeed}_verified`
 
@@ -409,7 +549,19 @@ export const workOrderStore = {
     return savedItem
   },
 
-  approveReceipt(id, signatureUrl = null) {
+  saveReceipt(receiptData) {
+    const savedItem = this._prepareReceipt(receiptData)
+    postRegistryAction({ action: 'saveReceipt', receipt: savedItem })
+    return savedItem
+  },
+
+  async saveReceiptAsync(receiptData) {
+    const savedItem = this._prepareReceipt(receiptData)
+    await postRegistryAction({ action: 'saveReceipt', receipt: savedItem })
+    return savedItem
+  },
+
+  approveReceipt(id, signatureUrl = null, signatureDataUrl = null) {
     const all = this.getReceipts()
     const index = all.findIndex((r) => r.id === id || r.receiptNumber === id)
     if (index >= 0) {
@@ -421,18 +573,37 @@ export const workOrderStore = {
         status: 'verified',
         verificationHash: hash,
         signatureUrl: signatureUrl !== null ? signatureUrl : all[index].signatureUrl,
+        signatureDataUrl:
+          signatureDataUrl !== null ? signatureDataUrl : all[index].signatureDataUrl,
         approvedAt: now,
         updatedAt: now,
       }
       persist(REC_STORAGE_KEY, all)
+      postRegistryAction({ action: 'saveReceipt', receipt: all[index] })
       return all[index]
     }
     return null
   },
 
+  async approveReceiptAsync(id, signatureUrl = null, signatureDataUrl = null) {
+    const approved = this.approveReceipt(id, signatureUrl, signatureDataUrl)
+    if (approved) {
+      await postRegistryAction({ action: 'saveReceipt', receipt: approved })
+    }
+    return approved
+  },
+
   deleteReceipt(id) {
     const all = this.getReceipts().filter((item) => item.id !== id && item.receiptNumber !== id)
     persist(REC_STORAGE_KEY, all)
+    postRegistryAction({ action: 'deleteReceipt', id })
+    return true
+  },
+
+  async deleteReceiptAsync(id) {
+    const all = this.getReceipts().filter((item) => item.id !== id && item.receiptNumber !== id)
+    persist(REC_STORAGE_KEY, all)
+    await postRegistryAction({ action: 'deleteReceipt', id })
     return true
   },
 
