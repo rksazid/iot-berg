@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="sazinBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#sazinBg)"/>
+  <path d="M16 20h32v6H22v5h20c3.3 0 6 2.7 6 6v5c0 3.3-2.7 6-6 6H16v-6h26v-5H22c-3.3 0-6-2.7-6-6v-5c0-3.3 2.7-6 6-6z" fill="#38bdf8" opacity="0.22"/>
+  <text x="32" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="18" fill="#ffffff" letter-spacing="1">SIIL</text>
+</svg>
+

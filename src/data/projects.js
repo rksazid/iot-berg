@@ -191,6 +191,46 @@ export const featuredProjects = [
     ],
     hasApiDocs: false,
   },
+  {
+    id: 'riffats-classroom',
+    title: "Riffat's Classroom — English Learning LMS",
+    shortTitle: "Riffat's Classroom",
+    tagline: '“Learn English. Build Confidence. Shine Brighter.”',
+    type: 'EdTech LMS & Interactive Learning Platform',
+    badge: 'Live LMS Platform',
+    badgeVariant: 'teal',
+    status: 'Production Live',
+    liveUrl: 'https://riffats-classroom.vercel.app/',
+    image: '/projects/riffats-classroom.jpg',
+    icon: '/projects/riffats-classroom-icon.svg',
+    mediaBadge: 'English Learning LMS',
+    summary:
+      'A warm, student-centered digital classroom providing structured grammar mastery, daily challenges, and exam preparation for young learners through video explanations, worksheets, and interactive quizzes.',
+    description:
+      "Built as a welcoming, structured English Learning Management System led by experienced instructor Riffat Nasrin. Features daily streak-based grammar challenges without requiring signup to test skills, structured English topic paths, timed quizzes and exams, interactive community boards, notice feeds, and a dedicated Teacher Portal.",
+    techStack: [
+      'Next.js (App Router)',
+      'React',
+      'TypeScript',
+      'Tailwind CSS',
+      'Teacher & Student Portal',
+      'Timed Quiz Engine',
+      'Cloud Hosted',
+    ],
+    metrics: [
+      { label: 'Daily Habit', value: 'Grammar Challenge' },
+      { label: 'Focus Area', value: 'Structured Mastery' },
+      { label: 'Assessments', value: 'Quizzes & Exams' },
+      { label: 'Experience', value: 'Student-Centered' },
+    ],
+    highlights: [
+      'Structured grammar curriculum covering sentence building, articles, and question formation with clear rules and worksheets',
+      'Signature Today’s Grammar Challenge with timed drills, streak tracking, and frictionless no-login self-testing',
+      'Dedicated Teacher Portal for managing lessons, courses, community announcements, and notices cleanly',
+      'Warm, approachable editorial design paired with interactive quizzes and exam preparation workflows',
+    ],
+    hasApiDocs: false,
+  },
 ]
 
 export const apiDocumentation = {

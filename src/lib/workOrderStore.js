@@ -2,6 +2,8 @@ import { numberToWordsBDT } from './numberToWords.js'
 
 const WO_STORAGE_KEY = 'iotberg_work_orders_v5'
 const REC_STORAGE_KEY = 'iotberg_payment_receipts_v5'
+const PARTNERS_STORAGE_KEY = 'iotberg_trusted_partners_v1'
+const BACKEND_INFO_KEY = 'iotberg_storage_backend'
 
 // Safe, non-revealing reference number generator (Company Initial + Type + YYMM + 4-char opaque code)
 const SAFE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -130,6 +132,69 @@ const INITIAL_RECEIPTS = [
   },
 ]
 
+const INITIAL_PARTNERS = [
+  {
+    id: 'IB-PTR-2611-SAZIN',
+    name: 'Sazin Innovative Industries Ltd.',
+    title: 'Industrial B2B Web & Dual CMS Partner (Canada & BD)',
+    quote:
+      'Partnered with IoT-Berg Software Engineering Team to power our industrial product catalogue, technical PDP, and multi-region infrastructure.',
+    websiteUrl: 'https://www.sazin.com.bd',
+    logoUrl: '/partners/sazin-logo.svg',
+    logoDataUrl: null,
+    category: 'Enterprise Client',
+    sortOrder: 1,
+    active: true,
+    createdAt: '2026-11-02T10:00:00.000Z',
+    updatedAt: '2026-11-02T10:00:00.000Z',
+  },
+  {
+    id: 'IB-PTR-2611-NAKS',
+    name: 'New Age Kids School',
+    title: 'International School & Admissions Portal (Japan & BD)',
+    quote:
+      'Streamlined admissions, faculty directories, and 90+ academic cohorts across Japan and Bangladesh on a reliable cloud portal.',
+    websiteUrl: 'https://newagekidsschool.com/',
+    logoUrl: '/projects/kids-school-icon.svg',
+    logoDataUrl: null,
+    category: 'Institutional Partner',
+    sortOrder: 2,
+    active: true,
+    createdAt: '2026-10-15T10:00:00.000Z',
+    updatedAt: '2026-10-15T10:00:00.000Z',
+  },
+  {
+    id: 'IB-PTR-2611-DAKHIL',
+    name: 'Dakhil 2012 — Khulna Alia',
+    title: 'Financial Transparency & Welfare Fund PWA',
+    quote:
+      '100% transparent monthly financial ledgers, verified donation workflows, and live community collaboration.',
+    websiteUrl: 'https://dakhil-2012-khulna-alia.vercel.app',
+    logoUrl: '/projects/dakhil-2012-icon.png',
+    logoDataUrl: null,
+    category: 'Community Portal',
+    sortOrder: 3,
+    active: true,
+    createdAt: '2026-10-10T10:00:00.000Z',
+    updatedAt: '2026-10-10T10:00:00.000Z',
+  },
+  {
+    id: 'IB-PTR-2611-RIFFAT',
+    name: "Riffat's Classroom",
+    title: 'English Learning LMS & Daily Grammar Challenges',
+    quote:
+      'A warm, student-centered digital classroom empowering young learners with structured grammar mastery and exam preparation.',
+    websiteUrl: 'https://riffats-classroom.vercel.app/',
+    logoUrl: '/projects/riffats-classroom-icon.svg',
+    logoDataUrl: null,
+    category: 'EdTech LMS',
+    sortOrder: 4,
+    active: true,
+    createdAt: '2026-11-10T10:00:00.000Z',
+    updatedAt: '2026-11-10T10:00:00.000Z',
+  },
+]
+
 function loadStored(key, fallback) {
   try {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -175,6 +240,7 @@ async function postRegistryAction(payload) {
         seed: {
           workOrders: INITIAL_WORK_ORDERS,
           receipts: INITIAL_RECEIPTS,
+          partners: INITIAL_PARTNERS,
         },
       }),
     })
@@ -187,19 +253,37 @@ async function postRegistryAction(payload) {
 }
 
 export const workOrderStore = {
+  getStorageBackend() {
+    if (typeof window === 'undefined' || !window.localStorage) return 'local'
+    return localStorage.getItem(BACKEND_INFO_KEY) || 'vercel-blob'
+  },
+
   /**
-   * Synchronize local cache with cloud Vercel Blob registry (/api/registry).
+   * Synchronize local cache with cloud registry (/api/registry — Neon Postgres or Vercel Blob).
    */
   async syncFromCloud() {
     if (typeof window === 'undefined' || typeof fetch !== 'function') {
-      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+      return {
+        workOrders: this.getWorkOrders(),
+        receipts: this.getReceipts(),
+        partners: this.getPartners(),
+        storageBackend: 'local',
+      }
     }
     try {
       const res = await fetch('/api/registry', { cache: 'no-store' })
       if (!res.ok) {
-        return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+        return {
+          workOrders: this.getWorkOrders(),
+          receipts: this.getReceipts(),
+          partners: this.getPartners(),
+          storageBackend: this.getStorageBackend(),
+        }
       }
       const data = await res.json()
+      if (data.storageBackend && window.localStorage) {
+        localStorage.setItem(BACKEND_INFO_KEY, data.storageBackend)
+      }
       if (data.initialized && Array.isArray(data.workOrders) && Array.isArray(data.receipts)) {
         const localRecs = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
         const remoteRecs = data.receipts.map((remoteRec) => {
@@ -217,20 +301,42 @@ export const workOrderStore = {
         })
         persist(WO_STORAGE_KEY, data.workOrders)
         persist(REC_STORAGE_KEY, remoteRecs)
-        return { workOrders: this.getWorkOrders(), receipts: this.getReceipts(), synced: true }
+        if (Array.isArray(data.partners) && data.partners.length > 0) {
+          persist(PARTNERS_STORAGE_KEY, data.partners)
+        }
+        return {
+          workOrders: this.getWorkOrders(),
+          receipts: this.getReceipts(),
+          partners: this.getPartners(),
+          storageBackend: data.storageBackend || 'vercel-blob',
+          synced: true,
+        }
       }
       // Registry is empty on cloud -> seed it with initial data cleanly
       const localWos = loadStored(WO_STORAGE_KEY, INITIAL_WORK_ORDERS)
       const localRecs = loadStored(REC_STORAGE_KEY, INITIAL_RECEIPTS)
+      const localPartners = loadStored(PARTNERS_STORAGE_KEY, INITIAL_PARTNERS)
       await postRegistryAction({
         action: 'bootstrap',
         workOrders: localWos,
         receipts: localRecs,
+        partners: localPartners,
       })
-      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts(), bootstrapped: true }
+      return {
+        workOrders: this.getWorkOrders(),
+        receipts: this.getReceipts(),
+        partners: this.getPartners(),
+        storageBackend: data.storageBackend || 'vercel-blob',
+        bootstrapped: true,
+      }
     } catch (err) {
       console.warn('Cloud sync skipped:', err.message)
-      return { workOrders: this.getWorkOrders(), receipts: this.getReceipts() }
+      return {
+        workOrders: this.getWorkOrders(),
+        receipts: this.getReceipts(),
+        partners: this.getPartners(),
+        storageBackend: this.getStorageBackend(),
+      }
     }
   },
 
@@ -677,6 +783,57 @@ export const workOrderStore = {
       activeProjectsCount,
       workOrdersCount: workOrders.length,
       receiptsCount: receipts.length,
+      partnersCount: this.getPartners().filter((p) => p.active !== false).length,
+      storageBackend: this.getStorageBackend(),
     }
+  },
+
+  getPartners() {
+    const list = loadStored(PARTNERS_STORAGE_KEY, INITIAL_PARTNERS)
+    return [...list].sort((a, b) => (Number(a.sortOrder) || 99) - (Number(b.sortOrder) || 99))
+  },
+
+  _preparePartner(partnerData) {
+    const all = loadStored(PARTNERS_STORAGE_KEY, INITIAL_PARTNERS)
+    const now = new Date().toISOString()
+    const existingIndex = all.findIndex((item) => item.id === partnerData.id)
+
+    let savedItem
+    if (existingIndex >= 0) {
+      savedItem = {
+        ...all[existingIndex],
+        ...partnerData,
+        updatedAt: now,
+      }
+      all[existingIndex] = savedItem
+    } else {
+      const existingIds = all.map((p) => p.id)
+      const generatedId = partnerData.id || generateNonRevealingId('IB-PTR', existingIds)
+      savedItem = {
+        ...partnerData,
+        id: generatedId,
+        sortOrder: partnerData.sortOrder != null ? Number(partnerData.sortOrder) : all.length + 1,
+        active: partnerData.active !== false,
+        createdAt: now,
+        updatedAt: now,
+      }
+      all.push(savedItem)
+    }
+
+    persist(PARTNERS_STORAGE_KEY, all)
+    return savedItem
+  },
+
+  async savePartnerAsync(partnerData) {
+    const savedItem = this._preparePartner(partnerData)
+    await postRegistryAction({ action: 'savePartner', partner: savedItem })
+    return savedItem
+  },
+
+  async deletePartnerAsync(id) {
+    const all = loadStored(PARTNERS_STORAGE_KEY, INITIAL_PARTNERS).filter((item) => item.id !== id)
+    persist(PARTNERS_STORAGE_KEY, all)
+    await postRegistryAction({ action: 'deletePartner', id })
+    return true
   },
 }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { serviceCatalog, stats } from '../data/services'
 import { featuredProjects } from '../data/projects'
+import { TrustedPartnersSlider } from '../components/TrustedPartnersSlider'
 
 const companyPillars = [
   {
@@ -167,6 +168,9 @@ export function HomePage() {
           </article>
         ))}
       </section>
+
+      {/* Trusted Partners & Testimonials Slider */}
+      <TrustedPartnersSlider />
 
       {/* Featured Projects & Developer APIs Showcase */}
       <section id="projects" className="featured-projects-section">
