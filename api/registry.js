@@ -1,6 +1,6 @@
 import { get, put } from '@vercel/blob'
 
-const REGISTRY_PATHNAME = 'registry/iotberg-registry-v1.json'
+const REGISTRY_PATHNAME = 'registry/iotberg-registry-v2.json'
 
 async function readRegistry(token) {
   try {

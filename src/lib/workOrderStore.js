@@ -1,9 +1,9 @@
 import { numberToWordsBDT } from './numberToWords.js'
 
-const WO_STORAGE_KEY = 'iotberg_work_orders_v4'
-const REC_STORAGE_KEY = 'iotberg_payment_receipts_v4'
+const WO_STORAGE_KEY = 'iotberg_work_orders_v5'
+const REC_STORAGE_KEY = 'iotberg_payment_receipts_v5'
 
-// Safe, non-revealing reference number generator (YYMM + 4-char opaque alphanumeric code)
+// Safe, non-revealing reference number generator (Company Initial + Type + YYMM + 4-char opaque code)
 const SAFE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
 export function generateNonRevealingId(prefix = 'IB-REC', existingIds = []) {
@@ -25,7 +25,7 @@ export function generateNonRevealingId(prefix = 'IB-REC', existingIds = []) {
 }
 
 export function generateWorkOrderRef(existingIds = []) {
-  return generateNonRevealingId('IB-WO', existingIds)
+  return generateNonRevealingId('IBSET-WO', existingIds)
 }
 
 export function generateReceiptNumber(existingIds = []) {
@@ -34,8 +34,9 @@ export function generateReceiptNumber(existingIds = []) {
 
 const INITIAL_WORK_ORDERS = [
   {
-    id: 'SIIL-A10003',
-    workOrderRef: 'SIIL - A10003',
+    id: 'IBSET-WO-2611-A8K4',
+    workOrderRef: 'IBSET-WO-2611-A8K4',
+    clientPoRef: 'SIIL - A10003',
     clientName: 'Sazin Innovative Industries Ltd.',
     clientContactPerson: 'Engr. Mr. Sabbir Ahmed',
     clientContactPhone: '01303-215742',
@@ -51,7 +52,7 @@ const INITIAL_WORK_ORDERS = [
       'Industrial B2B Website & Dual CMS (Canada & Bangladesh). Includes Public Website Shell, Homepage & Corporate, Product Catalogue, Technical PDP, Product Comparison (MVP), Industries & Applications, CAD & Document Center. Canadian Domain: www.flxcore.ca | BD Domain: To be shared later.',
     jobType: 'Industrial B2B Website',
     billTo: 'MD. Rezaul Karim',
-    // Financial Breakdown as per Work Order SIIL - A10003
+    // Financial Breakdown as per Work Order IBSET-WO-2611-A8K4 (Client PO: SIIL - A10003)
     coreContractValue: 450000,
     serverCharge: 30000, // Yearly Server Charge & Maintenance Fee
     serverPeriod: '1 Year',
@@ -78,7 +79,7 @@ const INITIAL_WORK_ORDERS = [
       { step: '04', pct: '20%', desc: 'SQA verification, SSL/CDN cutover, final handover', amount: 96000 },
     ],
     notes:
-      'Official signed Work Order SIIL - A10003. Initial 90-Days post-launch warranty & free support included. 3-Year service & maintenance agreement with 2-year extension option. Client responsible for yearly domain charge.',
+      'Official signed Work Order IBSET-WO-2611-A8K4 (Client PO: SIIL - A10003). Initial 90-Days post-launch warranty & free support included. 3-Year service & maintenance agreement with 2-year extension option. Client responsible for yearly domain charge.',
     scannedDocUrl: '/work-orders/SIIL-A10003-scan.jpg',
     pdfDocUrl: '/work-orders/SIIL-A10003-work-order.pdf',
     createdAt: '2026-11-02T10:00:00.000Z',
@@ -90,8 +91,9 @@ const INITIAL_RECEIPTS = [
   {
     id: 'IB-REC-2611-7C4N',
     receiptNumber: 'IB-REC-2611-7C4N',
-    workOrderId: 'SIIL-A10003',
-    workOrderRef: 'SIIL - A10003',
+    workOrderId: 'IBSET-WO-2611-A8K4',
+    workOrderRef: 'IBSET-WO-2611-A8K4',
+    clientPoRef: 'SIIL - A10003',
     clientName: 'Sazin Innovative Industries Ltd.',
     clientContactPerson: 'Engr. Mr. Sabbir Ahmed (Mob: 01303-215742)',
     clientEmail: 'sazin.ltd@gmail.com',
@@ -105,7 +107,7 @@ const INITIAL_RECEIPTS = [
     paymentDate: '2026-11-08',
     receiptDate: '2026-11-08',
     transactionNote:
-      'Advance cash payment received against Work Order SIIL - A10003 for Milestone 01 (Scope freeze, UX baseline & deployment plan).',
+      'Advance cash payment received against Work Order IBSET-WO-2611-A8K4 (Client PO: SIIL - A10003) for Milestone 01 (Scope freeze, UX baseline & deployment plan).',
     totalContractValue: 480000,
     coreContractValue: 450000,
     serverCharge: 30000,
@@ -284,6 +286,7 @@ export const workOrderStore = {
     return rawOrders.map((wo) => {
       const woNormId = (wo.id || '').replace(/\s+/g, '').toLowerCase()
       const woNormRef = (wo.workOrderRef || '').replace(/\s+/g, '').toLowerCase()
+      const woNormClientPo = (wo.clientPoRef || '').replace(/\s+/g, '').toLowerCase()
 
       const payments = receipts.filter((r) => {
         if (r.status === 'revoked') return false
@@ -292,8 +295,10 @@ export const workOrderStore = {
         return (
           rNormWo === woNormId ||
           rNormWo === woNormRef ||
+          (woNormClientPo && rNormWo === woNormClientPo) ||
           rNormRef === woNormId ||
-          rNormRef === woNormRef
+          rNormRef === woNormRef ||
+          (woNormClientPo && rNormRef === woNormClientPo)
         )
       })
 
@@ -322,7 +327,8 @@ export const workOrderStore = {
         (item) =>
           item.id === id ||
           (item.id || '').replace(/\s+/g, '').toLowerCase() === norm ||
-          (item.workOrderRef || '').replace(/\s+/g, '').toLowerCase() === norm,
+          (item.workOrderRef || '').replace(/\s+/g, '').toLowerCase() === norm ||
+          (item.clientPoRef && item.clientPoRef.replace(/\s+/g, '').toLowerCase() === norm),
       ) || null
     )
   },

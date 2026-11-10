@@ -19,6 +19,7 @@ export function WorkOrdersPage() {
   // Work Order Form State (Strictly Work Order scope — no forced advance fields)
   const [formData, setFormData] = useState({
     id: '',
+    clientPoRef: '',
     clientName: '',
     clientContactPerson: '',
     clientEmail: '',
@@ -62,6 +63,7 @@ export function WorkOrdersPage() {
     const freshId = generateWorkOrderRef(workOrderStore.getWorkOrders().map((w) => w.id))
     setFormData({
       id: freshId,
+      clientPoRef: '',
       clientName: '',
       clientContactPerson: '',
       clientEmail: '',
@@ -93,6 +95,7 @@ export function WorkOrdersPage() {
         : String(Math.max(0, (wo.contractValue || 450000) - (wo.totalAdditionalCharges || 100000)))
     setFormData({
       id: wo.id,
+      clientPoRef: wo.clientPoRef || '',
       clientName: wo.clientName,
       clientContactPerson: wo.clientContactPerson || '',
       clientEmail: wo.clientEmail || '',
@@ -187,6 +190,7 @@ export function WorkOrdersPage() {
     const q = searchQuery.toLowerCase()
     return (
       wo.id.toLowerCase().includes(q) ||
+      (wo.clientPoRef && wo.clientPoRef.toLowerCase().includes(q)) ||
       wo.clientName.toLowerCase().includes(q) ||
       wo.projectName.toLowerCase().includes(q)
     )
@@ -279,17 +283,24 @@ export function WorkOrdersPage() {
                       <div className="table-scope-cell">
                         <div className="project-title-line">
                           <strong className="project-title">{wo.projectName}</strong>
-                          {wo.pdfDocUrl && (
-                            <a
-                              href={wo.pdfDocUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="wo-scan-pill"
-                              title="Open Original Signed Work Order Document (PDF)"
-                            >
-                              📄 WO Scan
-                            </a>
-                          )}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            {wo.clientPoRef && (
+                              <span className="addon-scope-pill" title="Client External PO Reference">
+                                PO: {wo.clientPoRef}
+                              </span>
+                            )}
+                            {wo.pdfDocUrl && (
+                              <a
+                                href={wo.pdfDocUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="wo-scan-pill"
+                                title="Open Original Signed Work Order Document (PDF)"
+                              >
+                                📄 WO Scan
+                              </a>
+                            )}
+                          </div>
                         </div>
                         <p className="project-desc-clamp" title={wo.projectScope}>
                           {wo.projectScope}
@@ -429,16 +440,29 @@ export function WorkOrdersPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="modal-body-form">
-              <div className="form-row-2col">
+              <div className="form-row-3col">
                 <div className="form-group">
-                  <label htmlFor="wo-ref">Work Order Reference</label>
+                  <label htmlFor="wo-ref">Our Work Order ID (IB / IBSET)</label>
                   <input
                     id="wo-ref"
                     type="text"
                     className="form-input font-mono"
+                    placeholder="IBSET-WO-2611-XXXX"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                     required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="client-po-ref">Client PO Ref (Optional)</label>
+                  <input
+                    id="client-po-ref"
+                    type="text"
+                    className="form-input font-mono"
+                    placeholder="e.g. Buyer PO Ref"
+                    value={formData.clientPoRef}
+                    onChange={(e) => setFormData({ ...formData, clientPoRef: e.target.value })}
                   />
                 </div>
 
