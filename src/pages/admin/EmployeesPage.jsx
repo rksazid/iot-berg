@@ -40,7 +40,7 @@ export function EmployeesPage() {
     address: '',
     nidOrPassport: '',
     emergencyContact: '',
-    responsibilities: [],
+    responsibilitiesText: '',
     notes: '',
   })
 
@@ -133,7 +133,7 @@ export function EmployeesPage() {
       employmentType: roleConfig.defaultEmploymentType,
       probationMonths: roleConfig.defaultProbationMonths,
       salaryBDT: roleConfig.defaultSalaryBDT,
-      responsibilities: [...roleConfig.defaultResponsibilities],
+      responsibilitiesText: roleConfig.defaultResponsibilities.join('\n'),
     }))
   }
 
@@ -157,7 +157,7 @@ export function EmployeesPage() {
       address: '',
       nidOrPassport: '',
       emergencyContact: '',
-      responsibilities: [...defaultRole.defaultResponsibilities],
+      responsibilitiesText: defaultRole.defaultResponsibilities.join('\n'),
       notes: '',
     })
     setShowEmployeeModal(true)
@@ -165,6 +165,12 @@ export function EmployeesPage() {
 
   const handleOpenEditModal = (emp) => {
     setEditingEmployee(emp)
+    const roleConfig = employeeStore.getRoleConfig(emp.roleCategory)
+    const resp =
+      Array.isArray(emp.responsibilities) && emp.responsibilities.length > 0
+        ? emp.responsibilities
+        : roleConfig.defaultResponsibilities
+
     setEmployeeFormData({
       fullName: emp.fullName || '',
       email: emp.email || '',
@@ -182,7 +188,7 @@ export function EmployeesPage() {
       address: emp.address || '',
       nidOrPassport: emp.nidOrPassport || '',
       emergencyContact: emp.emergencyContact || '',
-      responsibilities: Array.isArray(emp.responsibilities) ? [...emp.responsibilities] : [],
+      responsibilitiesText: resp.join('\n'),
       notes: emp.notes || '',
     })
     setShowEmployeeModal(true)
@@ -197,10 +203,16 @@ export function EmployeesPage() {
 
     setIsSaving(true)
     try {
+      const respArray = employeeFormData.responsibilitiesText
+        .split('\n')
+        .map((s) => s.trim().replace(/^[-*•\d.]+\s*/, ''))
+        .filter(Boolean)
+
       const payload = {
         ...employeeFormData,
         id: editingEmployee ? editingEmployee.id : undefined,
         employeeId: editingEmployee ? editingEmployee.employeeId : undefined,
+        responsibilities: respArray,
       }
       const saved = await employeeStore.saveEmployeeAsync(payload)
       setEmployees(employeeStore.getAllEmployees())
@@ -380,8 +392,10 @@ export function EmployeesPage() {
     }
   }
 
+  const currentRoleCfg = employeeStore.getRoleConfig(employeeFormData.roleCategory)
+
   return (
-    <div className="admin-page-container">
+    <div className="admin-subpage-view">
       {/* Toast Notification */}
       {successToast && (
         <div
@@ -389,12 +403,12 @@ export function EmployeesPage() {
             position: 'fixed',
             top: '20px',
             right: '24px',
-            zIndex: 9999,
+            zIndex: 99999,
             background: 'linear-gradient(135deg, #0f766e, #0d9488)',
             color: '#fff',
             padding: '10px 18px',
             borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(15, 118, 110, 0.4)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
             fontSize: '13.5px',
             fontWeight: '600',
             display: 'flex',
@@ -407,175 +421,153 @@ export function EmployeesPage() {
         </div>
       )}
 
-      {/* Header Row */}
-      <div className="admin-header-row">
-        <div>
-          <div className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>Company HR &amp; Team Roster</span>
+      {/* Page Header matching Admin Design System */}
+      <div className="subpage-header glass-panel">
+        <div className="subpage-copy">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.2rem' }}>
+            <span className="section-label">Team &amp; HR Operations</span>
             <span
               style={{
-                fontSize: '11px',
+                fontSize: '10.5px',
                 fontWeight: '700',
-                padding: '2px 8px',
+                padding: '1px 7px',
                 borderRadius: '999px',
                 background: storageBackend.includes('neon') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
                 color: storageBackend.includes('neon') ? '#10b981' : '#60a5fa',
                 border: storageBackend.includes('neon') ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
               }}
             >
-              ● {storageBackend.includes('neon') ? 'Neon Serverless Postgres' : 'Vercel Cloud Blob'}
+              ● {storageBackend.includes('neon') ? 'Neon Postgres' : 'Cloud Blob'}
             </span>
           </div>
-          <h1 className="admin-page-title">Employee Management &amp; Documents</h1>
-          <p className="admin-page-desc">
+          <h2 className="subpage-title">Employee Management &amp; Documents</h2>
+          <p className="subpage-desc">
             Assign team roles (Intern, Mid-Junior, Mid, Senior Developer, Product Manager, Management, Accounts),
-            manage compensation, and generate official, tamper-evident appointment letter PDFs on corporate letterhead.
+            manage compensation, and issue official corporate appointment letter PDFs with digital verification.
           </p>
         </div>
 
-        <div className="admin-header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="button button-primary"
-            onClick={handleOpenAddModal}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <span>+</span>
-            <span>Add New Employee</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          className="button button-primary"
+          onClick={handleOpenAddModal}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Add New Employee</span>
+        </button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="admin-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '1.5rem' }}>
-        <div className="stat-card glass-panel">
-          <div className="stat-label">Total Team Members</div>
-          <div className="stat-val" style={{ color: '#0f766e' }}>{stats.total}</div>
-          <div className="stat-sub">Active &amp; Onboarding</div>
+      {/* Key KPI Stats Grid */}
+      <div className="admin-stats-grid">
+        <div className="admin-stat-card glass-panel">
+          <div className="stat-card-icon emerald">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div className="stat-card-data">
+            <span className="stat-label">Total Team</span>
+            <strong className="stat-value">{stats.total}</strong>
+            <span className="stat-subtext">Active &amp; Onboarding</span>
+          </div>
         </div>
 
-        <div className="stat-card glass-panel">
-          <div className="stat-label">Software Developers</div>
-          <div className="stat-val" style={{ color: '#0ea5e9' }}>{stats.developers}</div>
-          <div className="stat-sub">Junior · Mid · Senior</div>
+        <div className="admin-stat-card glass-panel">
+          <div className="stat-card-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+          </div>
+          <div className="stat-card-data">
+            <span className="stat-label">Software Developers</span>
+            <strong className="stat-value" style={{ color: '#0ea5e9' }}>{stats.developers}</strong>
+            <span className="stat-subtext">Junior · Mid · Senior</span>
+          </div>
         </div>
 
-        <div className="stat-card glass-panel">
-          <div className="stat-label">Internship Squad</div>
-          <div className="stat-val" style={{ color: '#818cf8' }}>{stats.interns}</div>
-          <div className="stat-sub">Structured 3-Mo Programs</div>
+        <div className="admin-stat-card glass-panel">
+          <div className="stat-card-icon purple">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div className="stat-card-data">
+            <span className="stat-label">Internship Squad</span>
+            <strong className="stat-value" style={{ color: '#818cf8' }}>{stats.interns}</strong>
+            <span className="stat-subtext">3-Month Training Programs</span>
+          </div>
         </div>
 
-        <div className="stat-card glass-panel">
-          <div className="stat-label">Product &amp; Management</div>
-          <div className="stat-val" style={{ color: '#fb923c' }}>{stats.productAndMgmt}</div>
-          <div className="stat-sub">Delivery &amp; Leadership</div>
-        </div>
-
-        <div className="stat-card glass-panel">
-          <div className="stat-label">Accounts &amp; Finance</div>
-          <div className="stat-val" style={{ color: '#10b981' }}>{stats.accounts}</div>
-          <div className="stat-sub">Payroll &amp; Ledger</div>
+        <div className="admin-stat-card glass-panel">
+          <div className="stat-card-icon amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            </svg>
+          </div>
+          <div className="stat-card-data">
+            <span className="stat-label">Product &amp; Leadership</span>
+            <strong className="stat-value" style={{ color: '#f59e0b' }}>{stats.productAndMgmt}</strong>
+            <span className="stat-subtext">Delivery &amp; Direction</span>
+          </div>
         </div>
       </div>
 
       {/* Main Tab Nav */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          borderBottom: '1px solid var(--border-color, #334155)',
-          marginBottom: '1.25rem',
-          paddingBottom: '2px',
-        }}
-      >
+      <div className="admin-tab-nav">
         <button
           type="button"
           onClick={() => setActiveTab('directory')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px 6px 0 0',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: activeTab === 'directory' ? 'rgba(15, 118, 110, 0.15)' : 'transparent',
-            color: activeTab === 'directory' ? '#2dd4bf' : '#94a3b8',
-            border: 'none',
-            borderBottom: activeTab === 'directory' ? '2px solid #2dd4bf' : '2px solid transparent',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
+          className={`admin-tab-btn ${activeTab === 'directory' ? 'active' : ''}`}
         >
           <span>👥 Employee Directory</span>
-          <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '999px' }}>
-            {employees.length}
-          </span>
+          <span className="admin-tab-badge">{employees.length}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('documents')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px 6px 0 0',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: activeTab === 'documents' ? 'rgba(15, 118, 110, 0.15)' : 'transparent',
-            color: activeTab === 'documents' ? '#2dd4bf' : '#94a3b8',
-            border: 'none',
-            borderBottom: activeTab === 'documents' ? '2px solid #2dd4bf' : '2px solid transparent',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
+          className={`admin-tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
         >
           <span>📄 Issued Appointment Letters &amp; Records</span>
-          <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '999px' }}>
-            {documents.length}
-          </span>
+          <span className="admin-tab-badge">{documents.length}</span>
         </button>
       </div>
 
       {activeTab === 'directory' && (
         <>
-          {/* Filters Bar */}
-          <div className="filter-controls-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '1.25rem' }}>
-            {/* Search Input */}
-            <div style={{ flex: '1 1 240px', minWidth: '220px' }}>
+          {/* Search & Toolbar */}
+          <div className="search-filter-bar glass-panel" style={{ flexWrap: 'wrap' }}>
+            <div className="search-input-wrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 type="text"
-                placeholder="Search by name, ID (e.g. IB-EMP), designation..."
+                className="search-input"
+                placeholder="Search by name, ID (e.g. IB-EMP), designation, email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="filter-search-input"
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(148, 163, 184, 0.2)',
-                  color: '#fff',
-                  fontSize: '13.5px',
-                }}
               />
             </div>
 
-            {/* Status Select */}
-            <div style={{ minWidth: '150px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <select
+                className="form-input"
+                style={{ padding: '0.4rem 0.65rem', fontSize: '0.8rem', minWidth: '130px' }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(148, 163, 184, 0.2)',
-                  color: '#fff',
-                  fontSize: '13.5px',
-                }}
               >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
@@ -583,32 +575,19 @@ export function EmployeesPage() {
                 <option value="onboarding">Onboarding</option>
                 <option value="former">Former</option>
               </select>
+
+              <span className="filter-count">
+                {filteredEmployees.length} {filteredEmployees.length === 1 ? 'Member' : 'Members'}
+              </span>
             </div>
           </div>
 
-          {/* Role Category Pills */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '6px',
-              flexWrap: 'wrap',
-              marginBottom: '1.25rem',
-            }}
-          >
+          {/* Role Category Filter Pills */}
+          <div className="role-filter-row">
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}
-              style={{
-                padding: '5px 12px',
-                borderRadius: '999px',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                border: 'none',
-                cursor: 'pointer',
-                background: selectedCategory === 'all' ? '#0f766e' : 'rgba(30, 41, 59, 0.7)',
-                color: selectedCategory === 'all' ? '#ffffff' : '#94a3b8',
-                transition: 'all 0.15s ease',
-              }}
+              className={`role-filter-pill ${selectedCategory === 'all' ? 'active' : ''}`}
             >
               All Roles ({employees.length})
             </button>
@@ -621,17 +600,8 @@ export function EmployeesPage() {
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '999px',
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    border: `1px solid ${isSelected ? cat.color : 'rgba(148, 163, 184, 0.2)'}`,
-                    cursor: 'pointer',
-                    background: isSelected ? cat.bg : 'rgba(30, 41, 59, 0.7)',
-                    color: isSelected ? cat.color : '#94a3b8',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`role-filter-pill ${isSelected ? 'active' : ''}`}
+                  style={isSelected ? { borderColor: cat.color, color: cat.color, background: cat.bg } : undefined}
                 >
                   {cat.label} ({count})
                 </button>
@@ -639,106 +609,229 @@ export function EmployeesPage() {
             })}
           </div>
 
-          {/* Employees Table */}
-          <div className="admin-table-scroller glass-panel" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+          {/* Employees Table Card */}
+          <div className="orders-table-card glass-panel">
+            <div className="admin-table-scroller">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Employee &amp; ID</th>
+                    <th>Role &amp; Category</th>
+                    <th>Department</th>
+                    <th>Compensation (BDT)</th>
+                    <th>Joining Date</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployees.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--muted)' }}>
+                        No employees match the selected criteria. Click "+ Add New Employee" to register team members.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEmployees.map((emp) => {
+                      const roleCfg = employeeStore.getRoleConfig(emp.roleCategory)
+                      const isProbation = emp.status === 'probation' || emp.roleCategory === 'intern'
+
+                      return (
+                        <tr key={emp.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                className="emp-avatar-circle"
+                                style={{
+                                  background: roleCfg.bg,
+                                  color: roleCfg.color,
+                                  border: `1.5px solid ${roleCfg.color}`,
+                                }}
+                              >
+                                {(emp.fullName || 'E').slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: '700', color: 'var(--text)', fontSize: '0.88rem' }}>
+                                  {emp.fullName}
+                                </div>
+                                <div className="mono-ref-sm">
+                                  {emp.employeeId} {emp.phone ? `· ${emp.phone}` : ''}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <div>
+                              <strong style={{ color: 'var(--text)', fontSize: '0.84rem' }}>
+                                {emp.designation}
+                              </strong>
+                              <div>
+                                <span
+                                  className="emp-role-tag"
+                                  style={{
+                                    background: roleCfg.bg,
+                                    color: roleCfg.color,
+                                    border: `1px solid ${roleCfg.border}`,
+                                  }}
+                                >
+                                  {roleCfg.label}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td>
+                            <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{emp.department}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{emp.employmentType || 'Full-time'}</div>
+                          </td>
+
+                          <td>
+                            <div style={{ fontWeight: '700', color: 'var(--brand-strong)', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                              BDT {Number(emp.salaryBDT || 0).toLocaleString('en-IN')}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                              {emp.roleCategory === 'intern' ? 'Monthly Stipend' : 'Monthly Gross'}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{emp.joiningDate || '—'}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                              Probation: {emp.probationMonths || 3} mo
+                            </div>
+                          </td>
+
+                          <td>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '999px',
+                                background: isProbation ? 'rgba(251, 191, 36, 0.15)' : 'rgba(52, 211, 153, 0.15)',
+                                color: isProbation ? '#f59e0b' : '#10b981',
+                                border: isProbation
+                                  ? '1px solid rgba(251, 191, 36, 0.3)'
+                                  : '1px solid rgba(52, 211, 153, 0.3)',
+                              }}
+                            >
+                              ● {emp.status ? emp.status.toUpperCase() : 'ACTIVE'}
+                            </span>
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                className="button button-sm button-primary"
+                                onClick={() => handleOpenDocModal(emp)}
+                                title="Generate Appointment Letter PDF"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <span>📄</span>
+                                <span>Generate Document</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                className="button button-sm button-secondary"
+                                onClick={() => handleOpenEditModal(emp)}
+                                title="Edit Employee Details"
+                              >
+                                ✏️
+                              </button>
+
+                              <button
+                                type="button"
+                                className="button button-sm button-ghost"
+                                onClick={() => handleDeleteEmployee(emp)}
+                                title="Delete Employee Record"
+                                style={{ color: '#ef4444' }}
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Generated Documents Tab */}
+      {activeTab === 'documents' && (
+        <div className="orders-table-card glass-panel">
+          <div className="admin-table-scroller">
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Employee &amp; ID</th>
-                  <th>Role &amp; Category</th>
-                  <th>Department</th>
-                  <th>Compensation (BDT)</th>
-                  <th>Joining Date</th>
+                  <th>Document Reference</th>
+                  <th>Candidate Name &amp; Role</th>
+                  <th>Document Type</th>
+                  <th>Issue Date</th>
+                  <th>Remuneration</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.length === 0 ? (
+                {documents.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                      No employees match the selected criteria. Click "+ Add New Employee" to register team members.
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--muted)' }}>
+                      No appointment letters or documents issued yet. Select an employee in the directory and click "Generate Document".
                     </td>
                   </tr>
                 ) : (
-                  filteredEmployees.map((emp) => {
-                    const roleCfg = employeeStore.getRoleConfig(emp.roleCategory)
-                    const isProbation = emp.status === 'probation' || emp.roleCategory === 'intern'
+                  documents.map((doc) => {
+                    const isInternDoc = doc.documentType === 'internship_agreement'
 
                     return (
-                      <tr key={emp.id}>
+                      <tr key={doc.id}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div
-                              style={{
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '50%',
-                                background: roleCfg.bg,
-                                color: roleCfg.color,
-                                border: `1.5px solid ${roleCfg.color}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: '700',
-                                fontSize: '13.5px',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {(emp.fullName || 'E').slice(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '700', color: '#f8fafc', fontSize: '14px' }}>
-                                {emp.fullName}
-                              </div>
-                              <div style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
-                                {emp.employeeId} {emp.phone ? `· ${emp.phone}` : ''}
-                              </div>
-                            </div>
-                          </div>
+                          <strong className="mono-ref" style={{ fontSize: '0.88rem' }}>
+                            {doc.documentRef}
+                          </strong>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Emp ID: {doc.employeeId || '—'}</span>
                         </td>
 
                         <td>
-                          <div>
-                            <div style={{ fontWeight: '600', color: '#e2e8f0', fontSize: '13px' }}>
-                              {emp.designation}
-                            </div>
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                marginTop: '3px',
-                                fontSize: '10.5px',
-                                fontWeight: '700',
-                                padding: '1px 7px',
-                                borderRadius: '4px',
-                                background: roleCfg.bg,
-                                color: roleCfg.color,
-                                border: `1px solid ${roleCfg.border}`,
-                              }}
-                            >
-                              {roleCfg.label}
-                            </span>
+                          <div style={{ fontWeight: '700', color: 'var(--text)', fontSize: '0.88rem' }}>
+                            {doc.candidateName}
                           </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{doc.designation}</div>
                         </td>
 
                         <td>
-                          <div style={{ fontSize: '13px', color: '#cbd5e1' }}>{emp.department}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>{emp.employmentType || 'Full-time'}</div>
+                          <span
+                            className="emp-role-tag"
+                            style={{
+                              background: isInternDoc ? 'rgba(129, 140, 248, 0.15)' : 'rgba(15, 118, 110, 0.15)',
+                              color: isInternDoc ? '#818cf8' : '#2dd4bf',
+                              border: isInternDoc ? '1px solid rgba(129, 140, 248, 0.3)' : '1px solid rgba(15, 118, 110, 0.3)',
+                            }}
+                          >
+                            {isInternDoc ? 'Internship Agreement' : 'Official Appointment Letter'}
+                          </span>
                         </td>
 
                         <td>
-                          <div style={{ fontWeight: '700', color: '#2dd4bf', fontSize: '13.5px' }}>
-                            BDT {Number(emp.salaryBDT || 0).toLocaleString('en-IN')}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {emp.roleCategory === 'intern' ? 'Monthly Stipend' : 'Monthly Gross'}
-                          </div>
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{doc.issueDate}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Effective: {doc.effectiveDate}</div>
                         </td>
 
                         <td>
-                          <div style={{ fontSize: '13px', color: '#cbd5e1' }}>{emp.joiningDate || '—'}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            Probation: {emp.probationMonths || 3} mo
+                          <div style={{ fontWeight: '700', color: 'var(--text)', fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}>
+                            BDT {Number(doc.salaryBDT || 0).toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
+                            {isInternDoc ? 'Monthly Stipend' : 'Monthly Gross'}
                           </div>
                         </td>
 
@@ -746,18 +839,16 @@ export function EmployeesPage() {
                           <span
                             style={{
                               display: 'inline-block',
-                              fontSize: '11px',
+                              fontSize: '0.68rem',
                               fontWeight: '700',
-                              padding: '2px 8px',
+                              padding: '0.15rem 0.5rem',
                               borderRadius: '999px',
-                              background: isProbation ? 'rgba(251, 191, 36, 0.15)' : 'rgba(52, 211, 153, 0.15)',
-                              color: isProbation ? '#fbbf24' : '#34d399',
-                              border: isProbation
-                                ? '1px solid rgba(251, 191, 36, 0.3)'
-                                : '1px solid rgba(52, 211, 153, 0.3)',
+                              background: 'rgba(52, 211, 153, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(52, 211, 153, 0.3)',
                             }}
                           >
-                            ● {emp.status ? emp.status.toUpperCase() : 'ACTIVE'}
+                            ✓ ISSUED &amp; VERIFIED
                           </span>
                         </td>
 
@@ -766,28 +857,29 @@ export function EmployeesPage() {
                             <button
                               type="button"
                               className="button button-sm button-primary"
-                              onClick={() => handleOpenDocModal(emp)}
-                              title="Generate Appointment Letter PDF"
+                              onClick={() => handleDownloadSavedDoc(doc)}
+                              disabled={generatingDocId === doc.id}
+                              title="Download Official PDF"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             >
-                              <span>📄</span>
-                              <span>Generate Document</span>
+                              <span>{generatingDocId === doc.id ? '⏳' : '📥'}</span>
+                              <span>{generatingDocId === doc.id ? 'Compiling...' : 'PDF'}</span>
                             </button>
 
                             <button
                               type="button"
                               className="button button-sm button-secondary"
-                              onClick={() => handleOpenEditModal(emp)}
-                              title="Edit Employee Details"
+                              onClick={() => handleCopyVerifyUrl(doc.documentRef)}
+                              title="Copy Dynamic Verification Link"
                             >
-                              ✏️
+                              {copiedDocId === doc.documentRef ? '✓ Copied' : '🔗 Link'}
                             </button>
 
                             <button
                               type="button"
                               className="button button-sm button-ghost"
-                              onClick={() => handleDeleteEmployee(emp)}
-                              title="Delete Employee Record"
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              title="Delete Document Record"
                               style={{ color: '#ef4444' }}
                             >
                               🗑️
@@ -801,252 +893,112 @@ export function EmployeesPage() {
               </tbody>
             </table>
           </div>
-        </>
-      )}
-
-      {/* Generated Documents Tab */}
-      {activeTab === 'documents' && (
-        <div className="admin-table-scroller glass-panel" style={{ borderRadius: '12px', overflow: 'hidden' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Document Reference</th>
-                <th>Candidate Name &amp; Role</th>
-                <th>Document Type</th>
-                <th>Issue Date</th>
-                <th>Remuneration</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.length === 0 ? (
-                <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
-                    No appointment letters or documents issued yet. Select an employee in the directory and click "Generate Document".
-                  </td>
-                </tr>
-              ) : (
-                documents.map((doc) => {
-                  const isInternDoc = doc.documentType === 'internship_agreement'
-
-                  return (
-                    <tr key={doc.id}>
-                      <td>
-                        <div style={{ fontWeight: '700', color: '#2dd4bf', fontFamily: 'monospace', fontSize: '13.5px' }}>
-                          {doc.documentRef}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Emp ID: {doc.employeeId || '—'}</div>
-                      </td>
-
-                      <td>
-                        <div style={{ fontWeight: '700', color: '#f8fafc', fontSize: '13.5px' }}>
-                          {doc.candidateName}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>{doc.designation}</div>
-                      </td>
-
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            background: isInternDoc ? 'rgba(129, 140, 248, 0.15)' : 'rgba(15, 118, 110, 0.15)',
-                            color: isInternDoc ? '#818cf8' : '#2dd4bf',
-                            border: isInternDoc ? '1px solid rgba(129, 140, 248, 0.3)' : '1px solid rgba(15, 118, 110, 0.3)',
-                          }}
-                        >
-                          {isInternDoc ? 'Internship Agreement' : 'Official Appointment Letter'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div style={{ fontSize: '13px', color: '#cbd5e1' }}>{doc.issueDate}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>Effective: {doc.effectiveDate}</div>
-                      </td>
-
-                      <td>
-                        <div style={{ fontWeight: '700', color: '#f8fafc', fontSize: '13px' }}>
-                          BDT {Number(doc.salaryBDT || 0).toLocaleString('en-IN')}
-                        </div>
-                        <div style={{ fontSize: '10.5px', color: '#64748b' }}>
-                          {isInternDoc ? 'Monthly Stipend' : 'Monthly Gross'}
-                        </div>
-                      </td>
-
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            fontSize: '10.5px',
-                            fontWeight: '700',
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            background: 'rgba(52, 211, 153, 0.15)',
-                            color: '#34d399',
-                            border: '1px solid rgba(52, 211, 153, 0.3)',
-                          }}
-                        >
-                          ✓ ISSUED &amp; VERIFIED
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <button
-                            type="button"
-                            className="button button-sm button-primary"
-                            onClick={() => handleDownloadSavedDoc(doc)}
-                            disabled={generatingDocId === doc.id}
-                            title="Download Official PDF"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <span>{generatingDocId === doc.id ? '⏳' : '📥'}</span>
-                            <span>{generatingDocId === doc.id ? 'Compiling...' : 'PDF'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            className="button button-sm button-secondary"
-                            onClick={() => handleCopyVerifyUrl(doc.documentRef)}
-                            title="Copy Dynamic Verification Link"
-                          >
-                            {copiedDocId === doc.documentRef ? '✓ Copied' : '🔗 Link'}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="button button-sm button-ghost"
-                            onClick={() => handleDeleteDocument(doc.id)}
-                            title="Delete Document Record"
-                            style={{ color: '#ef4444' }}
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
         </div>
       )}
 
-      {/* ADD / EDIT EMPLOYEE MODAL */}
+      {/* ADD / EDIT EMPLOYEE MODAL (Standard App Modal Design) */}
       {showEmployeeModal && (
-        <div className="admin-modal-overlay" onClick={() => setShowEmployeeModal(false)}>
+        <div className="modal-backdrop" onClick={() => setShowEmployeeModal(false)}>
           <div
-            className="admin-modal-card glass-panel"
+            className="modal-dialog modal-dialog-lg glass-panel"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <div className="modal-header-row">
+            <div className="modal-header">
               <div>
-                <span className="section-label">Team Directory Configuration</span>
+                <span className="section-label">Team &amp; HR Records</span>
                 <h3 className="modal-title">
-                  {editingEmployee ? `Edit Employee (${editingEmployee.fullName})` : 'Add New Employee'}
+                  {editingEmployee ? `Edit Employee (${editingEmployee.fullName})` : 'Add New Employee to Team'}
                 </h3>
               </div>
-              <button type="button" className="modal-close-btn" onClick={() => setShowEmployeeModal(false)}>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowEmployeeModal(false)}
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveEmployee} className="modal-body-form" style={{ marginTop: '1rem' }}>
-              {/* Role Category Selector with Highlighting */}
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', color: '#f1f5f9' }}>
-                  Company Role Category * (Auto-configures defaults)
-                </label>
-                <select
-                  value={employeeFormData.roleCategory}
-                  onChange={(e) => handleRoleCategoryChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1.5px solid #0f766e',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                  }}
-                >
-                  {ROLE_CATEGORIES.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.label} ({cat.defaultDepartment})
-                    </option>
-                  ))}
-                </select>
+            <form onSubmit={handleSaveEmployee} className="modal-form">
+              {/* SECTION 1: ROLE CATEGORY & POSITION */}
+              <div className="modal-section-heading">
+                <span className="badge">01</span>
+                <span>Role Category &amp; Designation</span>
               </div>
 
-              {/* Full Name & Designation */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-row-2col">
                 <div className="form-group">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Tanvir Hossain"
-                    value={employeeFormData.fullName}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, fullName: e.target.value })}
-                  />
+                  <label htmlFor="emp-role-cat">Company Role Category * (Auto-sets defaults)</label>
+                  <select
+                    id="emp-role-cat"
+                    className="form-input"
+                    value={employeeFormData.roleCategory}
+                    onChange={(e) => handleRoleCategoryChange(e.target.value)}
+                    style={{ fontWeight: '600' }}
+                  >
+                    {ROLE_CATEGORIES.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label} ({cat.defaultDepartment})
+                      </option>
+                    ))}
+                  </select>
+                  <span className="input-hint">
+                    Selecting a category pre-fills standard designations, department, salary, and responsibilities.
+                  </span>
                 </div>
 
                 <div className="form-group">
-                  <label>Exact Job Designation *</label>
+                  <label htmlFor="emp-desig">Job Designation / Title *</label>
                   <input
+                    id="emp-desig"
                     type="text"
                     required
+                    className="form-input"
                     placeholder="e.g. Software Developer (Mid Level)"
                     value={employeeFormData.designation}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, designation: e.target.value })}
                   />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {currentRoleCfg.defaultDesignations.slice(0, 3).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setEmployeeFormData({ ...employeeFormData, designation: d })}
+                        style={{
+                          fontSize: '0.68rem',
+                          background: 'var(--surface-3)',
+                          border: '1px solid var(--stroke)',
+                          borderRadius: '4px',
+                          color: 'var(--text-secondary)',
+                          padding: '1px 6px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        + {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Email & Phone */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-row-3col">
                 <div className="form-group">
-                  <label>Corporate or Personal Email</label>
+                  <label htmlFor="emp-dept">Department</label>
                   <input
-                    type="email"
-                    placeholder="e.g. employee@iotberg.com"
-                    value={employeeFormData.email}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
+                    id="emp-dept"
                     type="text"
-                    placeholder="e.g. +880 1712 345678"
-                    value={employeeFormData.phone}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Department & Employment Type */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Department</label>
-                  <input
-                    type="text"
+                    className="form-input"
                     value={employeeFormData.department}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, department: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Employment Classification</label>
+                  <label htmlFor="emp-emp-type">Employment Type</label>
                   <select
+                    id="emp-emp-type"
+                    className="form-input"
                     value={employeeFormData.employmentType}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, employmentType: e.target.value })}
                   >
@@ -1056,97 +1008,207 @@ export function EmployeesPage() {
                     <option value="Contract">Project Contract</option>
                   </select>
                 </div>
+
+                <div className="form-group">
+                  <label htmlFor="emp-status">Record Status</label>
+                  <select
+                    id="emp-status"
+                    className="form-input"
+                    value={employeeFormData.status}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, status: e.target.value })}
+                  >
+                    <option value="active">Active</option>
+                    <option value="probation">Probation / Intern</option>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="former">Former Employee</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Salary BDT, Joining Date, Probation */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 0.8fr', gap: '12px' }}>
+              {/* SECTION 2: PERSONAL & CONTACT PARTICULARS */}
+              <div className="modal-section-heading">
+                <span className="badge">02</span>
+                <span>Personal &amp; Contact Particulars</span>
+              </div>
+
+              <div className="form-row-3col">
                 <div className="form-group">
-                  <label>
-                    {employeeFormData.roleCategory === 'intern' ? 'Monthly Stipend (BDT)' : 'Monthly Gross Salary (BDT)'} *
-                  </label>
+                  <label htmlFor="emp-fullname">Full Name *</label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1000"
+                    id="emp-fullname"
+                    type="text"
                     required
-                    value={employeeFormData.salaryBDT}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, salaryBDT: e.target.value })}
+                    className="form-input"
+                    placeholder="e.g. Tanvir Hossain"
+                    value={employeeFormData.fullName}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, fullName: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Joining Date</label>
+                  <label htmlFor="emp-email">Email Address</label>
                   <input
+                    id="emp-email"
+                    type="email"
+                    className="form-input"
+                    placeholder="e.g. employee@iotberg.com"
+                    value={employeeFormData.email}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="emp-phone">Phone Number</label>
+                  <input
+                    id="emp-phone"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. +880 1712 345678"
+                    value={employeeFormData.phone}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row-2col">
+                <div className="form-group">
+                  <label htmlFor="emp-addr">Residential Address</label>
+                  <input
+                    id="emp-addr"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Demra, Dhaka-1360, Bangladesh"
+                    value={employeeFormData.address}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, address: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="emp-nid">NID / Student ID (Optional)</label>
+                  <input
+                    id="emp-nid"
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. NID-9182736450"
+                    value={employeeFormData.nidOrPassport}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, nidOrPassport: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 3: REMUNERATION & WORKING TERMS */}
+              <div className="modal-section-heading">
+                <span className="badge">03</span>
+                <span>Compensation &amp; Working Terms</span>
+              </div>
+
+              <div className="form-row-3col">
+                <div className="form-group">
+                  <label htmlFor="emp-salary">
+                    {employeeFormData.roleCategory === 'intern' ? 'Monthly Stipend (BDT) *' : 'Monthly Gross Salary (BDT) *'}
+                  </label>
+                  <input
+                    id="emp-salary"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    required
+                    className="form-input font-mono"
+                    value={employeeFormData.salaryBDT}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, salaryBDT: e.target.value })}
+                  />
+                  <div className="form-salary-preview">
+                    <span>In Words:</span>
+                    <strong>{numberToWordsBDT(Number(employeeFormData.salaryBDT) || 0)}</strong>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="emp-joining">Effective Joining Date *</label>
+                  <input
+                    id="emp-joining"
                     type="date"
                     required
+                    className="form-input"
                     value={employeeFormData.joiningDate}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, joiningDate: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Probation (Mo)</label>
+                  <label htmlFor="emp-probation">Probation Period (Months)</label>
                   <input
+                    id="emp-probation"
                     type="number"
                     min="1"
                     max="12"
+                    className="form-input"
                     value={employeeFormData.probationMonths}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, probationMonths: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Workplace & Reporting Manager */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-row-2col">
                 <div className="form-group">
-                  <label>Workplace Arrangement</label>
+                  <label htmlFor="emp-workplace">Workplace Arrangement</label>
                   <input
+                    id="emp-workplace"
                     type="text"
+                    className="form-input"
+                    placeholder="e.g. Hybrid (Dhaka Engineering Hub / Remote)"
                     value={employeeFormData.workplace}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, workplace: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Reporting Manager / Authority</label>
+                  <label htmlFor="emp-reporting">Reporting Manager / Authority</label>
                   <input
+                    id="emp-reporting"
                     type="text"
+                    className="form-input"
+                    placeholder="e.g. MD. Rezaul Karim, Project Manager & Team Lead"
                     value={employeeFormData.reportingTo}
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, reportingTo: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* Residential Address */}
+              {/* SECTION 4: CORE DUTIES & DELIVERABLES */}
+              <div className="modal-section-heading">
+                <span className="badge">04</span>
+                <span>Core Job Duties &amp; Deliverables</span>
+              </div>
+
               <div className="form-group">
-                <label>Candidate Address</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Demra, Dhaka-1360, Bangladesh"
-                  value={employeeFormData.address}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, address: e.target.value })}
+                <label htmlFor="emp-duties">Deliverables &amp; Responsibilities (One per line)</label>
+                <textarea
+                  id="emp-duties"
+                  rows="4"
+                  className="form-input textarea"
+                  placeholder="Enter each core duty on a new line..."
+                  value={employeeFormData.responsibilitiesText}
+                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, responsibilitiesText: e.target.value })}
                 />
+                <span className="input-hint">
+                  These duties will be formatted into bullet points on the official Appointment Letter PDF.
+                </span>
               </div>
 
-              {/* Status */}
-              <div className="form-group">
-                <label>Employment Record Status</label>
-                <select
-                  value={employeeFormData.status}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, status: e.target.value })}
+              <div className="modal-actions-row">
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setShowEmployeeModal(false)}
                 >
-                  <option value="active">Active Employee</option>
-                  <option value="probation">Probation / Intern Assessment</option>
-                  <option value="onboarding">Onboarding / Pre-Joining</option>
-                  <option value="former">Former Employee</option>
-                </select>
-              </div>
-
-              <div className="modal-actions-row" style={{ marginTop: '1.5rem' }}>
-                <button type="button" className="button button-ghost" onClick={() => setShowEmployeeModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="button button-primary" disabled={isSaving}>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={isSaving}
+                >
                   {isSaving ? 'Saving Record...' : editingEmployee ? 'Save Changes' : 'Create Employee Record'}
                 </button>
               </div>
@@ -1155,45 +1217,40 @@ export function EmployeesPage() {
         </div>
       )}
 
-      {/* GENERATE APPOINTMENT LETTER / DOCUMENT MODAL */}
+      {/* GENERATE APPOINTMENT LETTER / DOCUMENT MODAL (Standard App Modal Design) */}
       {showDocModal && targetEmployee && (
-        <div className="admin-modal-overlay" onClick={() => setShowDocModal(false)}>
+        <div className="modal-backdrop" onClick={() => setShowDocModal(false)}>
           <div
-            className="admin-modal-card glass-panel"
+            className="modal-dialog modal-dialog-lg glass-panel"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <div className="modal-header-row">
+            <div className="modal-header">
               <div>
-                <span className="section-label">Official Document Generator</span>
+                <span className="section-label">Official Document Generation</span>
                 <h3 className="modal-title">
-                  Generate Corporate Document for {targetEmployee.fullName}
+                  Generate Corporate Document — {targetEmployee.fullName}
                 </h3>
               </div>
-              <button type="button" className="modal-close-btn" onClick={() => setShowDocModal(false)}>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowDocModal(false)}
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleGeneratePdf} className="modal-body-form" style={{ marginTop: '1rem' }}>
-              {/* Document Type Selector */}
+            <form onSubmit={handleGeneratePdf} className="modal-form">
+              {/* Document Template Selection */}
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '700', color: '#f1f5f9' }}>
-                  Document Template
-                </label>
+                <label htmlFor="doc-type">Select Document Template *</label>
                 <select
+                  id="doc-type"
+                  className="form-input"
+                  style={{ fontWeight: '700', color: 'var(--brand-strong)' }}
                   value={docFormData.documentType}
                   onChange={(e) => setDocFormData({ ...docFormData, documentType: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1.5px solid #0f766e',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                  }}
                 >
                   <option value="appointment_letter">Official Letter of Appointment (Comprehensive Contract)</option>
                   <option value="internship_agreement">Internship Offer &amp; Training Agreement</option>
@@ -1201,117 +1258,140 @@ export function EmployeesPage() {
                 </select>
               </div>
 
-              {/* Ref Number & Issue Date */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+              <div className="form-row-2col">
                 <div className="form-group">
-                  <label>Document Reference Number *</label>
+                  <label htmlFor="doc-ref">Document Reference No * (Non-revealing)</label>
                   <input
+                    id="doc-ref"
                     type="text"
                     required
+                    className="form-input font-mono"
+                    style={{ fontWeight: '700', color: 'var(--brand-strong)' }}
                     value={docFormData.documentRef}
                     onChange={(e) => setDocFormData({ ...docFormData, documentRef: e.target.value })}
-                    style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2dd4bf' }}
                   />
+                  <span className="input-hint">Will be embedded in the document header and verification QR code.</span>
                 </div>
 
-                <div className="form-group">
-                  <label>Issue Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={docFormData.issueDate}
-                    onChange={(e) => setDocFormData({ ...docFormData, issueDate: e.target.value })}
-                  />
+                <div className="form-row-2col">
+                  <div className="form-group">
+                    <label htmlFor="doc-issue">Issue Date *</label>
+                    <input
+                      id="doc-issue"
+                      type="date"
+                      required
+                      className="form-input"
+                      value={docFormData.issueDate}
+                      onChange={(e) => setDocFormData({ ...docFormData, issueDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="doc-effective">Joining Date *</label>
+                    <input
+                      id="doc-effective"
+                      type="date"
+                      required
+                      className="form-input"
+                      value={docFormData.effectiveDate}
+                      onChange={(e) => setDocFormData({ ...docFormData, effectiveDate: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Effective Date & Compensation */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-row-2col">
                 <div className="form-group">
-                  <label>Effective Date of Joining *</label>
+                  <label htmlFor="doc-salary">Remuneration (BDT / mo) *</label>
                   <input
-                    type="date"
-                    required
-                    value={docFormData.effectiveDate}
-                    onChange={(e) => setDocFormData({ ...docFormData, effectiveDate: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Remuneration (BDT / mo) *</label>
-                  <input
+                    id="doc-salary"
                     type="number"
                     required
                     min="0"
+                    className="form-input font-mono"
                     value={docFormData.salaryBDT}
                     onChange={(e) => setDocFormData({ ...docFormData, salaryBDT: e.target.value })}
                   />
+                  <div className="form-salary-preview">
+                    <span>Spelled Words:</span>
+                    <strong>{numberToWordsBDT(Number(docFormData.salaryBDT) || 0)}</strong>
+                  </div>
+                </div>
+
+                <div className="form-row-2col">
+                  <div className="form-group">
+                    <label htmlFor="doc-prob">Probation (Months)</label>
+                    <input
+                      id="doc-prob"
+                      type="number"
+                      min="1"
+                      max="12"
+                      className="form-input"
+                      value={docFormData.probationMonths}
+                      onChange={(e) => setDocFormData({ ...docFormData, probationMonths: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="doc-workplace">Workplace</label>
+                    <input
+                      id="doc-workplace"
+                      type="text"
+                      className="form-input"
+                      value={docFormData.workplace}
+                      onChange={(e) => setDocFormData({ ...docFormData, workplace: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Reporting & Workplace */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Reporting Line</label>
-                  <input
-                    type="text"
-                    value={docFormData.reportingTo}
-                    onChange={(e) => setDocFormData({ ...docFormData, reportingTo: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Workplace Arrangement</label>
-                  <input
-                    type="text"
-                    value={docFormData.workplace}
-                    onChange={(e) => setDocFormData({ ...docFormData, workplace: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Responsibilities Text Area */}
               <div className="form-group">
-                <label>Key Duties &amp; Responsibilities (One per line)</label>
+                <label htmlFor="doc-duties">Deliverables &amp; Responsibilities (One per line)</label>
                 <textarea
+                  id="doc-duties"
                   rows="4"
+                  className="form-input textarea"
                   value={docFormData.responsibilitiesText}
                   onChange={(e) => setDocFormData({ ...docFormData, responsibilitiesText: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    color: '#fff',
-                    fontSize: '12.5px',
-                    lineHeight: '1.4',
-                  }}
                 />
               </div>
 
-              {/* Signatory Information */}
-              <div style={{ padding: '10px 12px', background: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.3)', borderRadius: '8px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#2dd4bf', marginBottom: '6px' }}>
-                  Authorized Signatory &amp; Seal
+              {/* Authorized Signatory Block Preview */}
+              <div
+                style={{
+                  padding: '0.85rem 1rem',
+                  background: 'var(--surface-2)',
+                  border: '1.5px dashed var(--stroke-strong)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--brand-strong)' }}>
+                    Authorized Signatory &amp; Seal
+                  </span>
+                  <span className="addons-pill-badge">Tamper-Evident SHA-256</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12.5px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem' }}>
                   <div>
-                    <span style={{ color: '#94a3b8' }}>Signatory: </span>
-                    <strong style={{ color: '#fff' }}>{docFormData.signatoryName}</strong>
+                    <span style={{ color: 'var(--muted)' }}>Signatory: </span>
+                    <strong style={{ color: 'var(--text)' }}>{docFormData.signatoryName}</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8' }}>Role: </span>
-                    <span style={{ color: '#cbd5e1' }}>{docFormData.signatoryRole}</span>
+                    <span style={{ color: 'var(--muted)' }}>Role: </span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{docFormData.signatoryRole}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                  * Includes IoT-Berg official logo, digital authorization seal, and tamper-evident QR verification code.
-                </div>
+                <span className="input-hint" style={{ display: 'block', marginTop: '0.3rem' }}>
+                  Includes IoT-Berg official logo, digital authorization seal, and tamper-evident online QR verification code.
+                </span>
               </div>
 
               <div className="modal-actions-row">
-                <button type="button" className="button button-ghost" onClick={() => setShowDocModal(false)}>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setShowDocModal(false)}
+                >
                   Cancel
                 </button>
                 <button
@@ -1321,7 +1401,7 @@ export function EmployeesPage() {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <span>{generatingDocId === targetEmployee.id ? '⏳' : '📥'}</span>
-                  <span>{generatingDocId === targetEmployee.id ? 'Compiling Official PDF...' : 'Download Official PDF'}</span>
+                  <span>{generatingDocId === targetEmployee.id ? 'Compiling PDF via Engine...' : 'Download Official PDF Document'}</span>
                 </button>
               </div>
             </form>
