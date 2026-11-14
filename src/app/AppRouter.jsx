@@ -11,6 +11,7 @@ import { WorkOrdersPage } from '../pages/admin/WorkOrdersPage'
 import { ReceiptsPage } from '../pages/admin/ReceiptsPage'
 import { CreateReceiptPage } from '../pages/admin/CreateReceiptPage'
 import { PartnersPage } from '../pages/admin/PartnersPage'
+import { EmployeesPage } from '../pages/admin/EmployeesPage'
 
 export function AppRouter() {
   return (
@@ -46,6 +47,7 @@ export function AppRouter() {
         <Route path="receipts/new" element={<CreateReceiptPage />} />
         <Route path="receipts/:receiptId/edit" element={<CreateReceiptPage />} />
         <Route path="receipts/edit/:receiptId" element={<CreateReceiptPage />} />
+        <Route path="employees" element={<EmployeesPage />} />
         <Route path="partners" element={<PartnersPage />} />
       </Route>
 

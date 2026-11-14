@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { workOrderStore } from '../../lib/workOrderStore'
+import { employeeStore } from '../../lib/employeeStore'
 import { formatCurrencyBDT } from '../../lib/numberToWords'
 import { compileReceiptHtml } from '../../lib/receiptPdfCompiler'
 import { generatePdf } from '../../lib/pdfClient'
@@ -11,18 +12,23 @@ export function AdminDashboardPage() {
   const [stats, setStats] = useState(workOrderStore.getSummaryStats())
   const [workOrders, setWorkOrders] = useState(workOrderStore.getWorkOrders())
   const [receipts, setReceipts] = useState(workOrderStore.getReceipts())
+  const [employeeCount, setEmployeeCount] = useState(() => employeeStore.getAllEmployees().length)
   const [downloadingId, setDownloadingId] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
 
   useEffect(() => {
     refreshData()
     workOrderStore.syncFromCloud().then(() => refreshData())
+    employeeStore.syncFromCloud().then(() => {
+      setEmployeeCount(employeeStore.getAllEmployees().length)
+    })
   }, [])
 
   const refreshData = () => {
     setStats(workOrderStore.getSummaryStats())
     setWorkOrders(workOrderStore.getWorkOrders())
     setReceipts(workOrderStore.getReceipts())
+    setEmployeeCount(employeeStore.getAllEmployees().length)
   }
 
   const handleDownloadPdf = async (receipt) => {
@@ -91,6 +97,15 @@ export function AdminDashboardPage() {
         </div>
 
         <div className="dashboard-hero-actions">
+          <Link to="/admin/employees" className="button button-secondary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span>Team ({employeeCount})</span>
+          </Link>
           {hasRole(['admin', 'manager']) && (
             <>
               <Link to="/admin/work-orders?action=new" className="button button-secondary">

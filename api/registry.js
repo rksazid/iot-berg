@@ -8,6 +8,10 @@ import {
   deleteReceiptNeon,
   upsertPartnerNeon,
   deletePartnerNeon,
+  upsertEmployeeNeon,
+  deleteEmployeeNeon,
+  upsertEmployeeDocumentNeon,
+  deleteEmployeeDocumentNeon,
   seedNeonIfEmpty,
 } from './_db.js'
 
@@ -34,6 +38,8 @@ async function readBlobRegistry(token) {
         workOrders: Array.isArray(data.workOrders) ? data.workOrders : [],
         receipts: Array.isArray(data.receipts) ? data.receipts : [],
         partners: Array.isArray(data.partners) ? data.partners : null,
+        employees: Array.isArray(data.employees) ? data.employees : null,
+        employeeDocuments: Array.isArray(data.employeeDocuments) ? data.employeeDocuments : null,
         updatedAt: data.updatedAt || null,
       }
     }
@@ -52,6 +58,8 @@ async function writeBlobRegistry(token, state) {
     workOrders: Array.isArray(state.workOrders) ? state.workOrders : [],
     receipts: Array.isArray(state.receipts) ? state.receipts : [],
     partners: Array.isArray(state.partners) ? state.partners : [],
+    employees: Array.isArray(state.employees) ? state.employees : [],
+    employeeDocuments: Array.isArray(state.employeeDocuments) ? state.employeeDocuments : [],
     updatedAt: new Date().toISOString(),
   }
 
@@ -136,20 +144,41 @@ export default async function handler(req, res) {
         workOrders: state?.initialized ? state.workOrders : null,
         receipts: state?.initialized ? state.receipts : null,
         partners: state?.partners || null,
+        employees: state?.employees || null,
+        employeeDocuments: state?.employeeDocuments || null,
         updatedAt: state?.updatedAt || null,
         storageBackend,
       })
     }
 
     if (req.method === 'POST' || req.method === 'PUT') {
-      const { action, receipt, workOrder, partner, id, workOrders, receipts, partners, seed } =
-        req.body || {}
+      const {
+        action,
+        receipt,
+        workOrder,
+        partner,
+        employee,
+        document,
+        id,
+        workOrders,
+        receipts,
+        partners,
+        employees,
+        employeeDocuments,
+        seed,
+      } = req.body || {}
       const storageBackend = useNeon ? 'neon-postgres' : 'vercel-blob'
 
       // NEON SERVERLESS POSTGRESQL PATH
       if (useNeon) {
         if (action === 'bootstrap') {
-          const seeded = await seedNeonIfEmpty({ workOrders, receipts, partners })
+          const seeded = await seedNeonIfEmpty({
+            workOrders,
+            receipts,
+            partners,
+            employees,
+            employeeDocuments,
+          })
           return res.status(200).json({ success: true, storageBackend, ...seeded })
         }
 
@@ -170,10 +199,20 @@ export default async function handler(req, res) {
           await upsertPartnerNeon(partner)
         } else if (action === 'deletePartner' && id) {
           await deletePartnerNeon(id)
+        } else if (action === 'saveEmployee' && employee) {
+          await upsertEmployeeNeon(employee)
+        } else if (action === 'deleteEmployee' && id) {
+          await deleteEmployeeNeon(id)
+        } else if (action === 'saveEmployeeDocument' && document) {
+          await upsertEmployeeDocumentNeon(document)
+        } else if (action === 'deleteEmployeeDocument' && id) {
+          await deleteEmployeeDocumentNeon(id)
         } else if (action === 'syncAll') {
           for (const wo of workOrders || []) await upsertWorkOrderNeon(wo)
           for (const rec of receipts || []) await upsertReceiptNeon(rec)
           for (const p of partners || []) await upsertPartnerNeon(p)
+          for (const emp of employees || []) await upsertEmployeeNeon(emp)
+          for (const doc of employeeDocuments || []) await upsertEmployeeDocumentNeon(doc)
         } else {
           return res.status(400).json({ error: 'Unsupported registry action or missing payload' })
         }
@@ -201,9 +240,29 @@ export default async function handler(req, res) {
             : Array.isArray(partners)
             ? partners
             : [],
+          employees: Array.isArray(seed?.employees)
+            ? seed.employees
+            : Array.isArray(employees)
+            ? employees
+            : [],
+          employeeDocuments: Array.isArray(seed?.employeeDocuments)
+            ? seed.employeeDocuments
+            : Array.isArray(employeeDocuments)
+            ? employeeDocuments
+            : [],
         }
-      } else if (!Array.isArray(state.partners)) {
-        state.partners = Array.isArray(seed?.partners) ? seed.partners : []
+      } else {
+        if (!Array.isArray(state.partners)) {
+          state.partners = Array.isArray(seed?.partners) ? seed.partners : []
+        }
+        if (!Array.isArray(state.employees)) {
+          state.employees = Array.isArray(seed?.employees) ? seed.employees : []
+        }
+        if (!Array.isArray(state.employeeDocuments)) {
+          state.employeeDocuments = Array.isArray(seed?.employeeDocuments)
+            ? seed.employeeDocuments
+            : []
+        }
       }
 
       if (action === 'bootstrap') {
@@ -215,6 +274,10 @@ export default async function handler(req, res) {
           workOrders: Array.isArray(workOrders) ? workOrders : state.workOrders,
           receipts: Array.isArray(receipts) ? receipts : state.receipts,
           partners: Array.isArray(partners) ? partners : state.partners,
+          employees: Array.isArray(employees) ? employees : state.employees,
+          employeeDocuments: Array.isArray(employeeDocuments)
+            ? employeeDocuments
+            : state.employeeDocuments,
         })
         return res.status(200).json({ success: true, storageBackend, ...saved })
       }
@@ -224,6 +287,10 @@ export default async function handler(req, res) {
           workOrders: Array.isArray(workOrders) ? workOrders : state.workOrders,
           receipts: Array.isArray(receipts) ? receipts : state.receipts,
           partners: Array.isArray(partners) ? partners : state.partners,
+          employees: Array.isArray(employees) ? employees : state.employees,
+          employeeDocuments: Array.isArray(employeeDocuments)
+            ? employeeDocuments
+            : state.employeeDocuments,
         })
         return res.status(200).json({ success: true, storageBackend, ...saved })
       }
@@ -284,6 +351,51 @@ export default async function handler(req, res) {
       if (action === 'deletePartner' && id) {
         const target = normalizeId(id)
         state.partners = state.partners.filter((p) => normalizeId(p.id) !== target)
+        const saved = await writeBlobRegistry(blobToken, state)
+        return res.status(200).json({ success: true, storageBackend, ...saved })
+      }
+
+      if (action === 'saveEmployee' && employee) {
+        const idx = state.employees.findIndex(
+          (e) => e.id === employee.id || (employee.employeeId && e.employeeId === employee.employeeId),
+        )
+        if (idx >= 0) {
+          state.employees[idx] = { ...state.employees[idx], ...employee }
+        } else {
+          state.employees.unshift(employee)
+        }
+        const saved = await writeBlobRegistry(blobToken, state)
+        return res.status(200).json({ success: true, storageBackend, employee, ...saved })
+      }
+
+      if (action === 'deleteEmployee' && id) {
+        const target = normalizeId(id)
+        state.employees = state.employees.filter(
+          (e) => normalizeId(e.id) !== target && normalizeId(e.employeeId) !== target,
+        )
+        const saved = await writeBlobRegistry(blobToken, state)
+        return res.status(200).json({ success: true, storageBackend, ...saved })
+      }
+
+      if (action === 'saveEmployeeDocument' && document) {
+        const idx = state.employeeDocuments.findIndex(
+          (d) =>
+            d.id === document.id || (document.documentRef && d.documentRef === document.documentRef),
+        )
+        if (idx >= 0) {
+          state.employeeDocuments[idx] = { ...state.employeeDocuments[idx], ...document }
+        } else {
+          state.employeeDocuments.unshift(document)
+        }
+        const saved = await writeBlobRegistry(blobToken, state)
+        return res.status(200).json({ success: true, storageBackend, document, ...saved })
+      }
+
+      if (action === 'deleteEmployeeDocument' && id) {
+        const target = normalizeId(id)
+        state.employeeDocuments = state.employeeDocuments.filter(
+          (d) => normalizeId(d.id) !== target && normalizeId(d.documentRef) !== target,
+        )
         const saved = await writeBlobRegistry(blobToken, state)
         return res.status(200).json({ success: true, storageBackend, ...saved })
       }

@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { workOrderStore } from '../lib/workOrderStore'
+import { employeeStore } from '../lib/employeeStore'
 import { formatCurrencyBDT } from '../lib/numberToWords'
 import { generateQrDataUrl } from '../lib/qrCode'
 import { compileReceiptHtml } from '../lib/receiptPdfCompiler'
+import { compileEmployeeDocumentHtml } from '../lib/appointmentLetterCompiler'
 import { generatePdf } from '../lib/pdfClient'
 
 export function VerifyReceiptPage() {
   const { receiptId } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+
+  const docQuery = searchParams.get('doc') || searchParams.get('ref') || null
+  const activeId = docQuery || receiptId || null
+
   const [lookupInput, setLookupInput] = useState('')
   const [receipt, setReceipt] = useState(null)
-  const [isLoading, setIsLoading] = useState(Boolean(receiptId))
+  const [employeeDoc, setEmployeeDoc] = useState(null)
+  const [isLoading, setIsLoading] = useState(Boolean(activeId))
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState(null)
@@ -19,28 +27,82 @@ export function VerifyReceiptPage() {
   useEffect(() => {
     let active = true
     async function load() {
-      if (!receiptId) {
+      if (!activeId) {
         setReceipt(null)
+        setEmployeeDoc(null)
         setIsLoading(false)
         return
       }
       setIsLoading(true)
-      // Show cached version immediately if present, then sync dynamically from cloud registry
-      const cached = workOrderStore.getReceipt(receiptId)
+
+      // 1. Check if activeId matches an Employee Document (e.g. IB-APP, IB-INT, IB-DOC)
+      const isDocCandidate = /^IB-(APP|INT|DOC)/i.test(activeId) || Boolean(docQuery)
+      if (isDocCandidate) {
+        const localDoc = employeeStore.getAllDocuments().find(
+          (d) =>
+            d.documentRef?.toLowerCase() === activeId.toLowerCase() ||
+            d.id?.toLowerCase() === activeId.toLowerCase(),
+        )
+        if (localDoc && active) {
+          setEmployeeDoc(localDoc)
+          setReceipt(null)
+          generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
+            if (active) setQrCodeUrl(qr)
+          })
+          setIsLoading(false)
+          return
+        }
+
+        // Try syncing from cloud to check for newest document
+        const cloudData = await employeeStore.syncFromCloud()
+        const cloudDoc = (cloudData?.documents || []).find(
+          (d) =>
+            d.documentRef?.toLowerCase() === activeId.toLowerCase() ||
+            d.id?.toLowerCase() === activeId.toLowerCase(),
+        )
+        if (cloudDoc && active) {
+          setEmployeeDoc(cloudDoc)
+          setReceipt(null)
+          generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
+            if (active) setQrCodeUrl(qr)
+          })
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // 2. Receipt Lookup Path
+      const cached = workOrderStore.getReceipt(activeId)
       if (cached && active) {
         setReceipt(cached)
+        setEmployeeDoc(null)
         generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
           if (active) setQrCodeUrl(qr)
         })
       }
 
-      const fresh = await workOrderStore.fetchReceiptById(receiptId)
+      const fresh = await workOrderStore.fetchReceiptById(activeId)
       if (active) {
-        setReceipt(fresh)
         if (fresh) {
+          setReceipt(fresh)
+          setEmployeeDoc(null)
           generateQrDataUrl(window.location.href, { width: 140, margin: 1 }).then((qr) => {
             if (active) setQrCodeUrl(qr)
           })
+        } else if (!isDocCandidate) {
+          // As a fallback, check if activeId was actually an employee document
+          const docFallback = employeeStore.getAllDocuments().find(
+            (d) =>
+              d.documentRef?.toLowerCase() === activeId.toLowerCase() ||
+              d.id?.toLowerCase() === activeId.toLowerCase(),
+          )
+          if (docFallback) {
+            setEmployeeDoc(docFallback)
+            setReceipt(null)
+          } else {
+            setReceipt(null)
+            setEmployeeDoc(null)
+          }
         }
         setIsLoading(false)
       }
@@ -49,7 +111,7 @@ export function VerifyReceiptPage() {
     return () => {
       active = false
     }
-  }, [receiptId])
+  }, [activeId, docQuery])
 
   const handleLookupSubmit = (e) => {
     e.preventDefault()
@@ -93,12 +155,46 @@ export function VerifyReceiptPage() {
     }
   }
 
+  const handleDownloadDocPdf = async () => {
+    if (!employeeDoc) return
+    setIsGeneratingPdf(true)
+    setPdfError(null)
+
+    try {
+      const htmlPayload = await compileEmployeeDocumentHtml(employeeDoc, window.location.origin)
+      const result = await generatePdf({
+        endpointMode: 'auto',
+        apiPath: 'html-to-pdf',
+        payload: {
+          html: htmlPayload,
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '8mm', right: '10mm', bottom: '8mm', left: '10mm' },
+        },
+      })
+
+      const url = URL.createObjectURL(result.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${employeeDoc.documentType === 'internship_agreement' ? 'Internship-Agreement' : 'Appointment-Letter'}-${(employeeDoc.candidateName || 'Candidate').replace(/\s+/g, '_')}-${employeeDoc.documentRef || employeeDoc.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Document PDF generation failed:', err)
+      setPdfError(err.message || 'Failed to download PDF document from engine.')
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
   const handlePrint = () => {
     window.print()
   }
 
-  // Dynamic Receipt Verification Lookup Portal (/verify without an ID)
-  if (!receiptId) {
+  // Dynamic Lookup Portal (/verify without an ID or ?doc=)
+  if (!activeId) {
     return (
       <div className="page verify-page">
         <div className="verify-container glass-panel" style={{ maxWidth: '580px', margin: '2rem auto', padding: '2.5rem 2rem', textAlign: 'center' }}>
@@ -117,24 +213,24 @@ export function VerifyReceiptPage() {
           </div>
           <span className="verify-kicker" style={{ display: 'block' }}>IoT-Berg Online Verification Registry</span>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 700, margin: '0.35rem 0 0.65rem' }}>
-            Verify Official Money Receipt
+            Verify Official Receipt or Document
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginBottom: '1.5rem' }}>
-            Enter your Receipt Number from a digital or printed IoT-Berg voucher, or scan the receipt QR code directly with your phone camera.
+            Enter your Receipt Number (e.g. IB-REC-...) or Appointment Document Ref (e.g. IB-APP-...) from a printed or digital voucher, or scan its QR code directly with your phone.
           </p>
 
           <form onSubmit={handleLookupSubmit} style={{ display: 'flex', gap: '0.6rem', maxWidth: '460px', margin: '0 auto 1.25rem' }}>
             <input
               type="text"
               className="form-input font-mono"
-              placeholder="e.g. IB-REC-2611-7C4N"
+              placeholder="e.g. IB-REC-2611-7C4N or IB-APP-2611-AP01"
               value={lookupInput}
               onChange={(e) => setLookupInput(e.target.value)}
               style={{ flex: 1 }}
               required
             />
             <button type="submit" className="button button-primary">
-              Verify Receipt
+              Verify Document
             </button>
           </form>
 
@@ -143,7 +239,10 @@ export function VerifyReceiptPage() {
               ← Back Home
             </Link>
             <Link to="/admin/receipts" className="button button-secondary button-sm">
-              Admin Receipts Portal
+              Admin Receipts
+            </Link>
+            <Link to="/admin/employees" className="button button-secondary button-sm">
+              Admin Employees
             </Link>
           </div>
         </div>
@@ -151,15 +250,146 @@ export function VerifyReceiptPage() {
     )
   }
 
-  if (isLoading && !receipt) {
+  if (isLoading && !receipt && !employeeDoc) {
     return (
       <div className="page verify-page">
         <div className="verify-container glass-panel" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
           <span className="spinner-inline" style={{ width: '28px', height: '28px', margin: '0 auto 1rem', display: 'block' }} />
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600 }}>Verifying Receipt in Cloud Registry...</h2>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600 }}>Verifying Record in Cloud Registry...</h2>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-            Looking up <code style={{ color: 'var(--brand-strong)' }}>{receiptId}</code>
+            Looking up <code style={{ color: 'var(--brand-strong)' }}>{activeId}</code>
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Employee Document Verification View
+  if (employeeDoc) {
+    const isInternDoc = employeeDoc.documentType === 'internship_agreement'
+
+    return (
+      <div className="page verify-page">
+        <div className="verify-shell">
+          {/* Verification Banner */}
+          <section className="verify-banner-panel glass-panel">
+            <div className="verify-status-badge-row">
+              <div className="verified-shield-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+              </div>
+              <div className="verify-status-copy">
+                <span className="verify-kicker">IoT-Berg Cloud Security Registry</span>
+                <h1 className="verify-heading">
+                  {isInternDoc ? 'Internship Agreement Verified' : 'Official Appointment Letter Verified'}
+                </h1>
+              </div>
+            </div>
+            <p className="verify-desc">
+              Authentic corporate employment record verified against the official IoT-Berg cloud security registry.
+            </p>
+            <div className="verify-meta-strip">
+              <span className="meta-tag">
+                <strong>Doc Ref:</strong> <code>{employeeDoc.documentRef || employeeDoc.id}</code>
+              </span>
+              <span className="meta-tag">
+                <strong>Status:</strong>{' '}
+                <span className="status-live-txt">✓ Active &amp; Authorized</span>
+              </span>
+              <span className="meta-tag">
+                <strong>Issued:</strong> {employeeDoc.issueDate || '—'}
+              </span>
+            </div>
+          </section>
+
+          {/* Document Particulars Card */}
+          <section className="verify-receipt-card glass-panel" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid var(--stroke)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand)', fontWeight: 700 }}>
+                  Candidate Particulars
+                </span>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text)', margin: '0.2rem 0' }}>
+                  {employeeDoc.candidateName}
+                </h2>
+                <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                  Position: <strong style={{ color: 'var(--text)' }}>{employeeDoc.designation}</strong> ({employeeDoc.department})
+                </div>
+              </div>
+
+              {qrCodeUrl && (
+                <div style={{ textAlign: 'center' }}>
+                  <img src={qrCodeUrl} alt="QR Code" width="84" height="84" style={{ borderRadius: '6px', background: '#fff', padding: '3px' }} />
+                  <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-secondary)', marginTop: '2px' }}>Scan to Verify</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Monthly Remuneration</span>
+                <strong style={{ fontSize: '1.2rem', color: '#2dd4bf' }}>
+                  {formatCurrencyBDT(employeeDoc.salaryBDT)}
+                </strong>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>
+                  {isInternDoc ? 'Monthly Stipend' : 'Gross Monthly Salary'}
+                </span>
+              </div>
+
+              <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Effective Joining Date</span>
+                <strong style={{ fontSize: '1.05rem', color: 'var(--text)' }}>
+                  {employeeDoc.effectiveDate || employeeDoc.joiningDate || '—'}
+                </strong>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>
+                  Probation: {employeeDoc.probationMonths || 3} Months
+                </span>
+              </div>
+
+              <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Authorized Signatory</span>
+                <strong style={{ fontSize: '1.05rem', color: 'var(--text)' }}>
+                  {employeeDoc.signatoryName || 'MD. Rezaul Karim'}
+                </strong>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>
+                  {employeeDoc.signatoryRole || 'Project Manager & Team Lead'}
+                </span>
+              </div>
+            </div>
+
+            {pdfError && (
+              <div style={{ padding: '0.75rem 1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', color: '#f87171', marginBottom: '1rem', fontSize: '13px' }}>
+                {pdfError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: '1px solid var(--stroke)', paddingTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={handleDownloadDocPdf}
+                disabled={isGeneratingPdf}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>{isGeneratingPdf ? '⏳' : '📥'}</span>
+                <span>{isGeneratingPdf ? 'Compiling PDF...' : 'Download Official PDF Document'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handlePrint}
+              >
+                🖨️ Print
+              </button>
+
+              <Link to="/verify" className="button button-ghost">
+                Verify Another
+              </Link>
+            </div>
+          </section>
         </div>
       </div>
     )
