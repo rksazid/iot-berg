@@ -197,7 +197,7 @@ export function VerifyReceiptPage() {
   if (!activeId) {
     return (
       <div className="page verify-page">
-        <div className="verify-container glass-panel" style={{ maxWidth: '580px', margin: '2rem auto', padding: '2.5rem 2rem', textAlign: 'center' }}>
+        <div className="verify-container verify-lookup-card glass-panel" style={{ maxWidth: '580px', margin: '2rem auto', textAlign: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.1rem', padding: '0.45rem 0.9rem', background: 'var(--surface-2)', border: '1px solid var(--stroke)', borderRadius: '12px' }}>
             <img
               src="/icons/app-icon.png"
@@ -219,7 +219,7 @@ export function VerifyReceiptPage() {
             Enter your Receipt Number (e.g. IB-REC-...) or Appointment Document Ref (e.g. IB-APP-...) from a printed or digital voucher, or scan its QR code directly with your phone.
           </p>
 
-          <form onSubmit={handleLookupSubmit} style={{ display: 'flex', gap: '0.6rem', maxWidth: '460px', margin: '0 auto 1.25rem' }}>
+          <form onSubmit={handleLookupSubmit} className="verify-lookup-form" style={{ display: 'flex', gap: '0.6rem', maxWidth: '460px', margin: '0 auto 1.25rem' }}>
             <input
               type="text"
               className="form-input font-mono"
@@ -234,7 +234,7 @@ export function VerifyReceiptPage() {
             </button>
           </form>
 
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
             <Link to="/" className="button button-secondary button-sm">
               ← Back Home
             </Link>
@@ -305,7 +305,7 @@ export function VerifyReceiptPage() {
           </section>
 
           {/* Document Particulars Card */}
-          <section className="verify-receipt-card glass-panel" style={{ padding: '2rem' }}>
+          <section className="verify-receipt-card glass-panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid var(--stroke)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
               <div>
                 <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand)', fontWeight: 700 }}>
@@ -365,7 +365,7 @@ export function VerifyReceiptPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: '1px solid var(--stroke)', paddingTop: '1.25rem' }}>
+            <div className="doc-verify-actions-row" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end', borderTop: '1px solid var(--stroke)', paddingTop: '1.25rem' }}>
               <button
                 type="button"
                 className="button button-primary"

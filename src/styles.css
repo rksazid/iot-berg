@@ -444,15 +444,26 @@ textarea {
 .site-main {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0.85rem 1.25rem 0;
+  box-sizing: border-box;
 }
 
 .page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   gap: 1.35rem;
   padding: 0.25rem 0 2.25rem;
+}
+
+.page > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ---- Typography Tokens ---- */
@@ -812,6 +823,9 @@ button:focus-visible,
   font-size: 0.72rem;
   line-height: 1.5;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .code-line {
@@ -820,6 +834,7 @@ button:focus-visible,
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.35rem;
+  word-break: break-word;
 }
 
 .code-keyword { color: #818cf8; font-weight: 700; }
@@ -3803,7 +3818,15 @@ button:focus-visible,
 
 @media (max-width: 1100px) {
   .hero-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .hero-copy,
+  .hero-card {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
 
   .stats-grid {
@@ -3814,31 +3837,48 @@ button:focus-visible,
   .services-showcase-grid,
   .home-projects-grid,
   .projects-cards-grid,
-  .process-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .process-grid,
   .api-workspace-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
   }
 
-  .api-endpoints-sidebar {
+  .api-endpoints-sidebar,
+  .endpoint-detail-main {
     position: static;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
 
   .detail-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     display: flex;
     flex-direction: column;
+    width: 100%;
   }
 
   .playground-wrap {
     order: 1;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
 
   .detail-panel {
     position: static;
     order: 2;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .playground-panel,
+  .input-split {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .cta-panel {
@@ -3950,7 +3990,18 @@ button:focus-visible,
   }
 
   .input-split {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .input-split > *,
+  .code-editor-wrap,
+  .code-editor-pane,
+  .preview-pane {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .margins-quad-row {
@@ -4259,11 +4310,187 @@ button:focus-visible,
     align-items: flex-start;
     gap: 0.75rem;
   }
+
+  /* Homepage & General Sections Mobile Refinement */
+  .hero-copy,
+  .hero-card {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .hero-meta-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .meta-chip {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    max-width: 100%;
+  }
+
+  .cta-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .cta-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .leader-card {
+    padding: 1.15rem 0.95rem;
+  }
+
+  .leader-actions-row {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .leader-actions-row .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Verification & Modals Mobile Adaptation */
+  .verify-banner-panel {
+    padding: 1.15rem 1rem;
+  }
+
+  .verify-container,
+  .verify-lookup-card {
+    padding: 1.35rem 1rem !important;
+    margin: 1rem auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .verify-lookup-form {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.65rem !important;
+  }
+
+  .verify-lookup-form .button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .receipt-view-card,
+  .verify-receipt-card {
+    padding: 1.25rem 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .receipt-amount-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem;
+  }
+
+  .amount-value {
+    font-size: 1.45rem;
+    word-break: break-word;
+  }
+
+  .payment-mode-box {
+    text-align: left;
+    width: 100%;
+  }
+
+  .receipt-spec-grid {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+  }
+
+  .verify-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .doc-verify-actions-row {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  .doc-verify-actions-row .button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .form-row-2col,
+  .form-row-3col,
+  .modal-payment-kpi-bar,
+  .post-payment-balance-strip {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.75rem;
+  }
+
+  .form-row-2col > *,
+  .form-row-3col > *,
+  .form-group,
+  .form-input {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .modal-backdrop {
+    padding: 0.65rem;
+  }
+
+  .modal-dialog,
+  .admin-modal-card {
+    width: 96% !important;
+    max-width: 96% !important;
+    margin: 0 auto;
+    padding: 1.25rem 1rem !important;
+  }
+
+  .admin-table-scroller {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-table {
+    min-width: 600px;
+  }
+
+  .admin-partners-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
   .projects-head-meta {
     grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+  }
+
+  .partner-slider-card {
+    flex: 0 0 92%;
+    min-width: 0;
+    max-width: calc(100vw - 1.75rem);
+    padding: 1rem 0.95rem;
+  }
+
+  .partners-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .home-project-metrics,
+  .service-card-metrics {
+    grid-template-columns: 1fr;
     gap: 0.35rem;
   }
 
@@ -4297,6 +4524,38 @@ button:focus-visible,
   .footer-links-group {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .projects-head-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-service-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-title {
+    font-size: 1.35rem;
+  }
+
+  .brand-name {
+    font-size: 0.95rem;
+  }
+
+  .brand-badge-text {
+    display: none;
+  }
+
+  .topbar-breadcrumbs .breadcrumb-root,
+  .topbar-breadcrumbs .breadcrumb-divider {
+    display: none;
   }
 }
 
@@ -7628,7 +7887,14 @@ select.form-input option {
   .create-receipt-layout,
   .admin-two-col-grid,
   .admin-insights-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .verify-main-grid > *,
+  .create-receipt-layout > *,
+  .admin-two-col-grid > *,
+  .admin-insights-grid > * {
+    min-width: 0;
+    max-width: 100%;
   }
   .insight-breakdown-row {
     grid-template-columns: 1fr;
@@ -7640,7 +7906,12 @@ select.form-input option {
   .form-row-3col,
   .modal-payment-kpi-bar,
   .post-payment-balance-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .form-row-2col > *,
+  .form-row-3col > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
   .receipt-view-header {
     flex-direction: column;
