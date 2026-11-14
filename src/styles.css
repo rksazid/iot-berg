@@ -1986,6 +1986,7 @@ button:focus-visible,
 .header-controls-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.65rem;
 }
 
@@ -1996,6 +1997,7 @@ button:focus-visible,
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--muted);
+  max-width: 100%;
 }
 
 .field-inline-select select {
@@ -2006,11 +2008,13 @@ button:focus-visible,
   font-size: 0.8rem;
   color: var(--text);
   outline: none;
+  max-width: 100%;
 }
 
 .field-header-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
@@ -3856,6 +3860,15 @@ button:focus-visible,
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .detail-grid > * {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .playground-wrap {
