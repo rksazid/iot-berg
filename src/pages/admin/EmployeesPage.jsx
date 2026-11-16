@@ -88,6 +88,8 @@ export function EmployeesPage() {
     const developers = employees.filter((e) =>
       ['developer_mid_junior', 'developer_mid', 'developer_senior'].includes(e.roleCategory),
     ).length
+    const sqa = employees.filter((e) => e.roleCategory === 'sqa').length
+    const hr = employees.filter((e) => e.roleCategory === 'hr').length
     const interns = employees.filter((e) => e.roleCategory === 'intern').length
     const productAndMgmt = employees.filter((e) =>
       ['product_manager', 'management'].includes(e.roleCategory),
@@ -95,7 +97,7 @@ export function EmployeesPage() {
     const accounts = employees.filter((e) => e.roleCategory === 'accounts').length
     const probationCount = employees.filter((e) => e.status === 'probation').length
 
-    return { total, developers, interns, productAndMgmt, accounts, probationCount }
+    return { total, developers, sqa, hr, interns, productAndMgmt, accounts, probationCount }
   }, [employees])
 
   // Filtered Employees
@@ -494,6 +496,19 @@ export function EmployeesPage() {
         </div>
 
         <div className="admin-stat-card glass-panel">
+          <div className="stat-card-icon" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="stat-card-data">
+            <span className="stat-label">SQA Squad</span>
+            <strong className="stat-value" style={{ color: '#ec4899' }}>{stats.sqa}</strong>
+            <span className="stat-subtext">SQA · Junior · Senior</span>
+          </div>
+        </div>
+
+        <div className="admin-stat-card glass-panel">
           <div className="stat-card-icon purple">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -516,9 +531,9 @@ export function EmployeesPage() {
             </svg>
           </div>
           <div className="stat-card-data">
-            <span className="stat-label">Product &amp; Leadership</span>
-            <strong className="stat-value" style={{ color: '#f59e0b' }}>{stats.productAndMgmt}</strong>
-            <span className="stat-subtext">Delivery &amp; Direction</span>
+            <span className="stat-label">HR, Product &amp; Leadership</span>
+            <strong className="stat-value" style={{ color: '#f59e0b' }}>{stats.hr + stats.productAndMgmt + stats.accounts}</strong>
+            <span className="stat-subtext">{stats.hr} HR · {stats.productAndMgmt} Prod/Mgmt · {stats.accounts} Acct</span>
           </div>
         </div>
       </div>
@@ -960,7 +975,7 @@ export function EmployeesPage() {
                     onChange={(e) => setEmployeeFormData({ ...employeeFormData, designation: e.target.value })}
                   />
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                    {currentRoleCfg.defaultDesignations.slice(0, 3).map((d) => (
+                    {currentRoleCfg.defaultDesignations.map((d) => (
                       <button
                         key={d}
                         type="button"

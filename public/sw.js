@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iotberg-v6'
+const CACHE_NAME = 'iotberg-v7'
 const PRECACHE_ASSETS = [
   '/manifest.webmanifest',
   '/favicon.ico',
