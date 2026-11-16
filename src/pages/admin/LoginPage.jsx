@@ -7,8 +7,8 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [identifier, setIdentifier] = useState('rksazid@gmail.com')
-  const [password, setPassword] = useState('admin123')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -57,12 +57,6 @@ export function LoginPage() {
     }
   }
 
-  const setPreset = (email, pass) => {
-    setIdentifier(email)
-    setPassword(pass)
-    setError(null)
-  }
-
   return (
     <div className="page admin-login-page standalone-login-page">
       <div className="login-shell">
@@ -105,7 +99,7 @@ export function LoginPage() {
                 className="form-input"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="rksazid@gmail.com"
+                placeholder="Enter email or username"
                 required
                 autoComplete="username"
               />
@@ -143,37 +137,18 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Quick preset credentials */}
-          <div className="login-presets-box">
-            <span className="presets-label">Quick Sign-In Credentials (Demo Roles):</span>
-            <div className="preset-buttons-row">
-              <button
-                type="button"
-                className="preset-btn active-preset"
-                onClick={() => setPreset('rksazid@gmail.com', 'admin123')}
-              >
-                <strong>Admin (Team Lead)</strong>
-                <span>MD. Rezaul Karim</span>
-              </button>
-
-              <button
-                type="button"
-                className="preset-btn"
-                onClick={() => setPreset('finance@iotberg.cloud', 'manager123')}
-              >
-                <strong>Manager</strong>
-                <span>Finance & Ops</span>
-              </button>
-
-              <button
-                type="button"
-                className="preset-btn"
-                onClick={() => setPreset('auditor@iotberg.cloud', 'auditor123')}
-              >
-                <strong>Auditor</strong>
-                <span>Read-Only Compliance</span>
-              </button>
-            </div>
+          <div
+            className="login-secure-footer"
+            style={{
+              marginTop: '1.25rem',
+              paddingTop: '0.85rem',
+              borderTop: '1px solid var(--stroke)',
+              textAlign: 'center',
+              fontSize: '0.72rem',
+              color: 'var(--muted)',
+            }}
+          >
+            🔒 Authorized Personnel Only · Secure Session Managed
           </div>
         </div>
       </div>

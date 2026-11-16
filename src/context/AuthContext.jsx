@@ -8,33 +8,49 @@ const USERS = [
     name: 'MD. Rezaul Karim',
     username: 'rksazid',
     email: 'rksazid@gmail.com',
+    alternateEmails: ['admin@iotberg.com', 'admin@iot-berg.com', 'lead@iotberg.com'],
     role: 'admin',
     designation: 'Project Manager & Team Lead',
     company: 'IoT-Berg Engineering',
     avatar: '/team/rezaul-karim-avatar.png',
-    passwords: ['admin123', 'iotberg2026', 'rksazid'],
+    passwords: [
+      'IoTberg#2026@Lead',
+      'IB@Admin#2026!',
+      'iotberg2026',
+      'rksazid',
+    ],
   },
   {
     id: 'usr_mgr',
     name: 'Finance & Ops Manager',
     username: 'manager',
-    email: 'finance@iotberg.cloud',
+    email: 'finance@iotberg.com',
+    alternateEmails: ['finance@iotberg.cloud', 'manager@iotberg.com'],
     role: 'manager',
     designation: 'Finance & Accounts Specialist',
     company: 'IoT-Berg Engineering',
     avatar: null,
-    passwords: ['manager123', 'finance2026'],
+    passwords: [
+      'IoTberg#2026@Finance',
+      'IB@Manager#2026!',
+      'finance2026',
+    ],
   },
   {
     id: 'usr_audit',
     name: 'Compliance Auditor',
     username: 'auditor',
-    email: 'auditor@iotberg.cloud',
+    email: 'auditor@iotberg.com',
+    alternateEmails: ['auditor@iotberg.cloud'],
     role: 'auditor',
     designation: 'External Audit & Verification',
     company: 'Audit Compliance',
     avatar: null,
-    passwords: ['auditor123', 'audit2026'],
+    passwords: [
+      'IoTberg#2026@Audit',
+      'IB@Audit#2026!',
+      'audit2026',
+    ],
   },
 ]
 
@@ -60,7 +76,10 @@ export function AuthProvider({ children }) {
 
       const user = USERS.find(
         (u) =>
-          (u.email.toLowerCase() === cleanId || u.username.toLowerCase() === cleanId) &&
+          (u.email.toLowerCase() === cleanId ||
+            u.username.toLowerCase() === cleanId ||
+            (Array.isArray(u.alternateEmails) &&
+              u.alternateEmails.some((em) => em.toLowerCase() === cleanId))) &&
           u.passwords.includes(cleanPass),
       )
 
