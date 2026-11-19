@@ -4,6 +4,7 @@ import { HomePage } from '../pages/HomePage'
 import { ConvertPage } from '../pages/ConvertPage'
 import { ProjectsPage } from '../pages/ProjectsPage'
 import { VerifyReceiptPage } from '../pages/VerifyReceiptPage'
+import { PassportPhotoPage } from '../pages/PassportPhotoPage'
 import { LoginPage } from '../pages/admin/LoginPage'
 import { AdminLayout } from '../pages/admin/AdminLayout'
 import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
@@ -24,6 +25,7 @@ export function AppRouter() {
         <Route path="/showcase" element={<Navigate to="/projects" replace />} />
         <Route path="/convert" element={<ConvertPage />} />
         <Route path="/convert/:tool" element={<ConvertPage />} />
+        <Route path="/passport-photo" element={<PassportPhotoPage />} />
 
         {/* Public Money Receipt Online Verification Portal */}
         <Route path="/verify" element={<VerifyReceiptPage />} />

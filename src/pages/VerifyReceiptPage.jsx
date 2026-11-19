@@ -299,7 +299,7 @@ export function VerifyReceiptPage() {
                 <span className="status-live-txt">✓ Active &amp; Authorized</span>
               </span>
               <span className="meta-tag">
-                <strong>Issued:</strong> {employeeDoc.issueDate || '—'}
+                <strong>Issued:</strong> {employeeDoc.issueDate || '-'}
               </span>
             </div>
           </section>
@@ -341,7 +341,7 @@ export function VerifyReceiptPage() {
               <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: '8px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Effective Joining Date</span>
                 <strong style={{ fontSize: '1.05rem', color: 'var(--text)' }}>
-                  {employeeDoc.effectiveDate || employeeDoc.joiningDate || '—'}
+                  {employeeDoc.effectiveDate || employeeDoc.joiningDate || '-'}
                 </strong>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>
                   Probation: {employeeDoc.probationMonths || 3} Months
@@ -574,13 +574,13 @@ export function VerifyReceiptPage() {
               <div className="spec-tile">
                 <span className="tile-lbl">Total Work Order Value</span>
                 <span className="tile-val">
-                  {receipt.totalContractValue ? formatCurrencyBDT(receipt.totalContractValue) : '—'}
+                  {receipt.totalContractValue ? formatCurrencyBDT(receipt.totalContractValue) : '-'}
                 </span>
               </div>
               <div className="spec-tile">
                 <span className="tile-lbl">Balance Remaining</span>
                 <span className="tile-val" style={{ color: '#ef4444' }}>
-                  {receipt.balanceRemaining != null ? formatCurrencyBDT(receipt.balanceRemaining) : '—'}
+                  {receipt.balanceRemaining != null ? formatCurrencyBDT(receipt.balanceRemaining) : '-'}
                 </span>
               </div>
             </div>
@@ -629,7 +629,7 @@ export function VerifyReceiptPage() {
             <div className="receipt-desc-box">
               <span className="desc-box-label">Project / Work Order Scope</span>
               <p className="desc-box-text">
-                {receipt.projectName} — {receipt.transactionNote}
+                {receipt.projectName} - {receipt.transactionNote}
               </p>
             </div>
 

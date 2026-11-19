@@ -1,7 +1,7 @@
 export const featuredProjects = [
   {
     id: 'dakhil-2012-khulna-alia',
-    title: 'Dakhil 2012 Batch — Khulna Alia Madrasa',
+    title: 'Dakhil 2012 Batch - Khulna Alia Madrasa',
     shortTitle: 'Dakhil 2012 Portal',
     tagline: 'Alumni Community Portal, Welfare Fund & Financial Transparency PWA',
     type: 'Community Platform & Financial Transparency PWA',
@@ -45,7 +45,7 @@ export const featuredProjects = [
   },
   {
     id: 'easy-check-in',
-    title: 'Easy Check-In — Multi-Tenant Presence & Geofence SaaS',
+    title: 'Easy Check-In - Multi-Tenant Presence & Geofence SaaS',
     shortTitle: 'Easy Check-In',
     tagline: 'Location-Based Presence, Member Attendance & PWA Platform',
     type: 'Progressive Web Application (PWA) & Mobile REST API',
@@ -91,7 +91,7 @@ export const featuredProjects = [
   },
   {
     id: 'pdf-lagbe',
-    title: 'pdf-lagbe — High-Throughput Document & PDF API',
+    title: 'pdf-lagbe - High-Throughput Document & PDF API',
     shortTitle: 'pdf-lagbe API',
     tagline: 'Public Developer API & Headless Document Rendering Engine',
     type: 'Public REST API & Developer Engine',
@@ -193,7 +193,7 @@ export const featuredProjects = [
   },
   {
     id: 'riffats-classroom',
-    title: "Riffat's Classroom — English Learning LMS",
+    title: "Riffat's Classroom - English Learning LMS",
     shortTitle: "Riffat's Classroom",
     tagline: '“Learn English. Build Confidence. Shine Brighter.”',
     type: 'EdTech LMS & Interactive Learning Platform',
@@ -254,18 +254,18 @@ export const apiDocumentation = {
       responseType: 'application/pdf',
       playgroundTool: 'html',
       params: [
-        { name: 'html', type: 'string', required: true, default: '—', desc: 'Raw HTML markup or template string (max 2 MB).' },
+        { name: 'html', type: 'string', required: true, default: '-', desc: 'Raw HTML markup or template string (max 2 MB).' },
         { name: 'format', type: 'string', required: false, default: '"A4"', desc: 'Paper format: "A4", "Letter", "A3", "Legal", "Tabloid".' },
         { name: 'landscape', type: 'boolean', required: false, default: 'false', desc: 'Render in landscape orientation.' },
         { name: 'margin', type: 'object', required: false, default: '1cm all sides', desc: 'Object specifying CSS margins: { top, right, bottom, left } (e.g. "12mm" or "0.5in").' },
         { name: 'printBackground', type: 'boolean', required: false, default: 'true', desc: 'Whether to render CSS background colors and images.' },
         { name: 'scale', type: 'number', required: false, default: '1.0', desc: 'Zoom/scale factor between 0.1 and 2.0.' },
         { name: 'displayHeaderFooter', type: 'boolean', required: false, default: 'false', desc: 'Display print header and footer templates.' },
-        { name: 'headerTemplate', type: 'string', required: false, default: '—', desc: 'HTML snippet for page header (supports classes: date, title, pageNumber, totalPages).' },
-        { name: 'footerTemplate', type: 'string', required: false, default: '—', desc: 'HTML snippet for page footer.' },
+        { name: 'headerTemplate', type: 'string', required: false, default: '-', desc: 'HTML snippet for page header (supports classes: date, title, pageNumber, totalPages).' },
+        { name: 'footerTemplate', type: 'string', required: false, default: '-', desc: 'HTML snippet for page footer.' },
         { name: 'preferCSSPageSize', type: 'boolean', required: false, default: 'false', desc: 'Give precedence to @page size CSS declarations over the format option.' },
-        { name: 'waitForSelector', type: 'string', required: false, default: '—', desc: 'CSS selector to wait for before capturing the PDF snapshot.' },
-        { name: 'waitForTimeout', type: 'number', required: false, default: '—', desc: 'Additional delay in milliseconds (0 - 5000) for async charts or scripts to settle.' },
+        { name: 'waitForSelector', type: 'string', required: false, default: '-', desc: 'CSS selector to wait for before capturing the PDF snapshot.' },
+        { name: 'waitForTimeout', type: 'number', required: false, default: '-', desc: 'Additional delay in milliseconds (0 - 5000) for async charts or scripts to settle.' },
       ],
       curlSnippet: `curl -X POST https://pdf-lagbe.onrender.com/api/v1/html-to-pdf \\
   -H "Content-Type: application/json" \\
@@ -349,7 +349,7 @@ else:
       responseType: 'application/pdf',
       playgroundTool: 'markdown',
       params: [
-        { name: 'markdown', type: 'string', required: true, default: '—', desc: 'Markdown source string (max 2 MB).' },
+        { name: 'markdown', type: 'string', required: true, default: '-', desc: 'Markdown source string (max 2 MB).' },
         { name: 'format', type: 'string', required: false, default: '"A4"', desc: 'Paper format: "A4", "Letter", "A3", "Legal", "Tabloid".' },
         { name: 'landscape', type: 'boolean', required: false, default: 'false', desc: 'Render in landscape orientation.' },
         { name: 'margin', type: 'object', required: false, default: '1cm all sides', desc: 'Object specifying margins: { top, right, bottom, left }.' },
@@ -408,7 +408,7 @@ with open("blueprint.pdf", "wb") as f:
       responseType: 'application/pdf',
       playgroundTool: 'docx',
       params: [
-        { name: 'file', type: 'file (.docx)', required: true, default: '—', desc: 'Binary DOCX document file (max 5 MB).' },
+        { name: 'file', type: 'file (.docx)', required: true, default: '-', desc: 'Binary DOCX document file (max 5 MB).' },
         { name: 'format', type: 'string', required: false, default: '"A4"', desc: 'Optional output page size override.' },
         { name: 'landscape', type: 'string ("true"|"false")', required: false, default: '"false"', desc: 'Optional landscape orientation switch.' },
       ],

@@ -238,7 +238,7 @@ export function MdPlayground() {
             <div className="fullscreen-header">
               <div className="fs-title-wrap">
                 <span className="brand-dot" />
-                <span>IoT-Berg Markdown Studio — Fullscreen Workspace</span>
+                <span>IoT-Berg Markdown Studio - Fullscreen Workspace</span>
               </div>
               <button type="button" className="button button-secondary" onClick={() => setFullscreen(false)}>
                 Exit Fullscreen (Esc)

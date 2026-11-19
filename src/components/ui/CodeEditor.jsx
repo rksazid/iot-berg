@@ -212,7 +212,7 @@ export const CodeEditor = forwardRef(function CodeEditor(
     const next = value ?? ''
     if (current === next) return
     // Replace only the changed region (common prefix/suffix preserved) so a
-    // reconciled editor — e.g. the off-screen instance during fullscreen —
+    // reconciled editor - e.g. the off-screen instance during fullscreen -
     // keeps its caret, scroll, and undo history instead of jumping to 0.
     let from = 0
     const minLen = Math.min(current.length, next.length)

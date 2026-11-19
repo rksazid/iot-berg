@@ -26,6 +26,15 @@ Behavior:
 - `Auto select` tries the primary endpoint first and falls back to the secondary endpoint when the request cannot be completed.
 - You can also manually choose a specific endpoint from the service page UI.
 
+## Passport Photo Studio
+
+`/passport-photo` turns a portrait into a correctly sized passport, visa or ID photo. Everything runs in the visitor's browser with [MediaPipe Tasks](https://ai.google.dev/edge/mediapipe/solutions/guide). The photo is never uploaded.
+
+- Document sizes and head-size rules live in `src/data/photoSpecs.js`.
+- The two models in `public/models/passport/` are Google's published MediaPipe models (`face_landmarker.task` and `selfie_multiclass_256x256.tflite`), self-hosted so the page has no third-party requests.
+- The WebAssembly runtime is served from the installed `@mediapipe/tasks-vision` package by a small plugin in `vite.config.js`, so it always matches the JS version.
+- `npm test` runs the cropping, print-sheet and JPEG unit tests.
+
 ## Vercel Deployment
 
 This project includes `vercel.json` so direct visits to client-side routes like `/services/html-to-pdf` work correctly on Vercel.

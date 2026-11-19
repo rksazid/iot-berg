@@ -16,7 +16,7 @@ function escapeHtml(str) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—'
+  if (!dateStr) return '-'
   try {
     const d = new Date(dateStr)
     if (isNaN(d.getTime())) return dateStr
@@ -436,7 +436,7 @@ export async function compileEmployeeDocumentHtml(doc, origin = 'https://iot-ber
     </div>
 
     <div class="subject-line">
-      ${escapeHtml(docTitle)} — ${designation}
+      ${escapeHtml(docTitle)} - ${designation}
     </div>
 
     <div class="salutation">Dear ${candidateName},</div>

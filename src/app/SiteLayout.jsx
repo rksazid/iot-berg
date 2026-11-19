@@ -5,6 +5,7 @@ const navigationLinks = [
   { to: '/', label: 'Overview' },
   { to: '/projects', label: 'Projects' },
   { to: '/convert', label: 'Document Studio' },
+  { to: '/passport-photo', label: 'Passport Photo' },
 ]
 
 export function SiteLayout() {
@@ -77,7 +78,7 @@ export function SiteLayout() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="nav-link nav-link-external"
-                title="MD. Rezaul Karim — Project Manager & Team Lead Portfolio"
+                title="MD. Rezaul Karim - Project Manager & Team Lead Portfolio"
                 onClick={() => setMenuOpen(false)}
               >
                 <span>Team Lead</span>
@@ -122,7 +123,7 @@ export function SiteLayout() {
               <NavLink className="footer-brand-badge" to="/" aria-label="IoT-Berg Home">
                 <img
                   src="/brand/iotberg-logo-horizontal.png"
-                  alt="IoT-Berg — Web, Mobile, API, Cloud, IoT"
+                  alt="IoT-Berg - Web, Mobile, API, Cloud, IoT"
                   className="footer-brand-logo"
                   width="180"
                   height="60"
@@ -154,6 +155,7 @@ export function SiteLayout() {
                 <NavLink to="/convert/markdown">Markdown to PDF Engine</NavLink>
                 <NavLink to="/convert/docx">Word (.docx) to PDF Engine</NavLink>
                 <NavLink to="/convert">Unified Studio</NavLink>
+                <NavLink to="/passport-photo">Passport Photo Studio</NavLink>
               </div>
 
               <div className="footer-col">

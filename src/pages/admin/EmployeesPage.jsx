@@ -711,7 +711,7 @@ export function EmployeesPage() {
                           </td>
 
                           <td>
-                            <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{emp.joiningDate || '—'}</div>
+                            <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{emp.joiningDate || '-'}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>
                               Probation: {emp.probationMonths || 3} mo
                             </div>
@@ -813,7 +813,7 @@ export function EmployeesPage() {
                           <strong className="mono-ref" style={{ fontSize: '0.88rem' }}>
                             {doc.documentRef}
                           </strong>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Emp ID: {doc.employeeId || '—'}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Emp ID: {doc.employeeId || '-'}</span>
                         </td>
 
                         <td>
@@ -1243,7 +1243,7 @@ export function EmployeesPage() {
               <div>
                 <span className="section-label">Official Document Generation</span>
                 <h3 className="modal-title">
-                  Generate Corporate Document — {targetEmployee.fullName}
+                  Generate Corporate Document - {targetEmployee.fullName}
                 </h3>
               </div>
               <button

@@ -592,7 +592,7 @@ export function CreateReceiptPage() {
                 <option value="">-- Standalone Receipt (No Linked Order) --</option>
                 {workOrders.map((wo) => (
                   <option key={wo.id} value={wo.id}>
-                    {wo.id} — {wo.clientName} (Contract: {formatCurrencyBDT(wo.contractValue)} · Balance: {formatCurrencyBDT(wo.balanceDue)})
+                    {wo.id} - {wo.clientName} (Contract: {formatCurrencyBDT(wo.contractValue)} · Balance: {formatCurrencyBDT(wo.balanceDue)})
                   </option>
                 ))}
               </select>
@@ -934,7 +934,7 @@ export function CreateReceiptPage() {
                         ? 'Uploading to Vercel Object Storage...'
                         : signatureUrl
                         ? 'Upload / Replace Authorized Signature Image'
-                        : 'Click to Upload Signature Image (PNG, JPG, WebP — Auto-optimized)'}
+                        : 'Click to Upload Signature Image (PNG, JPG, WebP - Auto-optimized)'}
                     </span>
                   </label>
 

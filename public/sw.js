@@ -33,6 +33,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/')) return
+  // Passport-photo AI runtime and models (~35 MB): left to the browser's HTTP
+  // cache, so they are not copied into Cache Storage and rewritten every visit.
+  if (url.pathname.startsWith('/models/') || url.pathname.startsWith('/mediapipe/')) return
 
   // Network-First for HTML / SPA route navigations so deployments reflect immediately
   const isHtmlRequest =

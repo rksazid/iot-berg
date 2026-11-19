@@ -92,10 +92,10 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
   )
   const formattedTotal = receipt.totalContractValue
     ? formatPdfBDT(receipt.totalContractValue)
-    : '—'
+    : '-'
   const formattedBalance = receipt.balanceRemaining != null
     ? formatPdfBDT(receipt.balanceRemaining)
-    : '—'
+    : '-'
 
   const coreVal = receipt.coreContractValue != null ? Number(receipt.coreContractValue) : 450000
   const serverCharge = receipt.serverCharge != null ? Number(receipt.serverCharge) : 0
@@ -141,7 +141,7 @@ export async function compileReceiptHtml(receipt, origin = 'https://iot-berg.ver
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Receipt — ${escapeHtml(receiptRef)}</title>
+  <title>Payment Receipt - ${escapeHtml(receiptRef)}</title>
   <style>
     @page {
       size: A4 portrait;

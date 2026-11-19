@@ -165,7 +165,7 @@ const INITIAL_PARTNERS = [
   },
   {
     id: 'IB-PTR-2611-DAKHIL',
-    name: 'Dakhil 2012 — Khulna Alia',
+    name: 'Dakhil 2012 - Khulna Alia',
     title: 'Financial Transparency & Welfare Fund PWA',
     quote:
       '100% transparent monthly financial ledgers, verified donation workflows, and live community collaboration.',
@@ -259,7 +259,7 @@ export const workOrderStore = {
   },
 
   /**
-   * Synchronize local cache with cloud registry (/api/registry — Neon Postgres or Vercel Blob).
+   * Synchronize local cache with cloud registry (/api/registry - Neon Postgres or Vercel Blob).
    */
   async syncFromCloud() {
     if (typeof window === 'undefined' || typeof fetch !== 'function') {

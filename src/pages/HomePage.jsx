@@ -432,7 +432,7 @@ export function HomePage() {
               <div className="leader-avatar-frame">
                 <img
                   src="/team/rezaul-karim-portrait.jpg"
-                  alt="MD. Rezaul Karim — Project Manager & Team Lead, Team IoT-Berg"
+                  alt="MD. Rezaul Karim - Project Manager & Team Lead, Team IoT-Berg"
                   className="leader-avatar-img"
                   width="180"
                   height="180"

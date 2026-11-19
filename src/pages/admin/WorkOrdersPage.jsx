@@ -16,7 +16,7 @@ export function WorkOrdersPage() {
   const [selectedWoForPayments, setSelectedWoForPayments] = useState(null)
   const [downloadingId, setDownloadingId] = useState(null)
 
-  // Work Order Form State (Strictly Work Order scope — no forced advance fields)
+  // Work Order Form State (Strictly Work Order scope - no forced advance fields)
   const [formData, setFormData] = useState({
     id: '',
     clientPoRef: '',
@@ -774,7 +774,7 @@ export function WorkOrdersPage() {
                           </td>
                           <td>
                             <p className="payment-desc-clamp" title={p.transactionNote}>
-                              {p.transactionNote || '—'}
+                              {p.transactionNote || '-'}
                             </p>
                           </td>
                           <td>
