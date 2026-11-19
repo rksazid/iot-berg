@@ -130,49 +130,45 @@ export function ConvertPage() {
         </div>
       </header>
 
-      {/* Main Workspace Layout */}
+      {/* The studio gets the full page width; reference material follows it. */}
       <div className="workspace">
-        <section className="detail-grid">
-          <aside className="detail-panel">
-            <div className="detail-block">
-              <span className="section-label">Engine Capabilities</span>
-              <div className="detail-list">
-                {service.highlights.map((item) => (
-                  <div className="detail-list-item" key={item}>
-                    <span className="mini-dot" />
-                    <p>{item}</p>
+        {/* key remounts the playground on tab change so each tool starts clean */}
+        <Playground key={current.key} />
+
+        <section className="studio-info" aria-label={`About the ${service.name} engine`}>
+          <div className="studio-info-card">
+            <span className="section-label">Engine Capabilities</span>
+            <div className="detail-list">
+              {service.highlights.map((item) => (
+                <div className="detail-list-item" key={item}>
+                  <span className="mini-dot" />
+                  <p>{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="studio-info-card">
+            <span className="section-label">Verified API Endpoints</span>
+            <div className="endpoint-list">
+              {service.endpoints.map((endpoint) => (
+                <div className="endpoint-card" key={endpoint.value}>
+                  <div className="endpoint-card-head">
+                    <strong>{endpoint.name}</strong>
+                    <span className="status-dot-green" />
                   </div>
-                ))}
-              </div>
+                  <span className="endpoint-url">{endpoint.value}</span>
+                  <p>{endpoint.note}</p>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="detail-block">
-              <span className="section-label">Verified API Endpoints</span>
-              <div className="endpoint-list">
-                {service.endpoints.map((endpoint) => (
-                  <div className="endpoint-card" key={endpoint.value}>
-                    <div className="endpoint-card-head">
-                      <strong>{endpoint.name}</strong>
-                      <span className="status-dot-green" />
-                    </div>
-                    <span className="endpoint-url">{endpoint.value}</span>
-                    <p>{endpoint.note}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="detail-block support-box">
-              <span className="section-label">Production SLA</span>
-              <p className="support-copy">
-                Need enterprise volume, dedicated headless clusters, or custom fonts? Our team provides turnkey cloud configurations.
-              </p>
-            </div>
-          </aside>
-
-          {/* key remounts the playground on tab change so each tool starts clean */}
-          <div className="playground-wrap">
-            <Playground key={current.key} />
+          <div className="studio-info-card support-box">
+            <span className="section-label">Production SLA</span>
+            <p className="support-copy">
+              Need enterprise volume, dedicated headless clusters, or custom fonts? Our team provides turnkey cloud configurations.
+            </p>
           </div>
         </section>
       </div>

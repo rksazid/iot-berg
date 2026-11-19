@@ -33,7 +33,9 @@ function validateFile(file) {
   return null
 }
 
-function getDefaultFilename() {
+/** "Annual Report.docx" becomes "Annual Report.pdf"; with no file, a timestamped name. */
+function getDefaultFilename(file) {
+  if (file) return `${file.name.replace(/\.docx$/i, '')}.pdf`
   const now = new Date()
   const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
   return `iot-berg-docx-${stamp}.pdf`
@@ -78,8 +80,8 @@ export function DocxPlayground() {
   function handleFileSelect(file) {
     const error = validateFile(file)
     if (error) {
+      // A rejected replacement leaves the file that is already loaded in place.
       setStatus((prev) => ({ ...prev, error, success: '' }))
-      setFormState((current) => ({ ...current, file: null }))
       return
     }
 
@@ -89,6 +91,7 @@ export function DocxPlayground() {
 
   function handleInputChange(event) {
     const file = event.target.files?.[0]
+    event.target.value = '' // allow choosing the same file again
     if (file) handleFileSelect(file)
   }
 
@@ -99,6 +102,8 @@ export function DocxPlayground() {
 
   function handleDragLeave(event) {
     event.preventDefault()
+    // Moving over a child element also fires dragleave; only react to really leaving.
+    if (event.currentTarget.contains(event.relatedTarget)) return
     setDragActive(false)
   }
 
@@ -148,7 +153,7 @@ export function DocxPlayground() {
         ? (outputFilename.trim().endsWith('.pdf')
             ? outputFilename.trim()
             : `${outputFilename.trim()}.pdf`)
-        : getDefaultFilename()
+        : getDefaultFilename(formState.file)
 
       startDownload(result.blob, name)
 
@@ -235,7 +240,10 @@ export function DocxPlayground() {
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault() // Space would otherwise scroll the page
+                    fileInputRef.current?.click()
+                  }
                 }}
               >
                 <div className="drop-icon-box">
@@ -253,25 +261,45 @@ export function DocxPlayground() {
                 </div>
               </div>
             ) : (
-              <div className="file-info-card">
+              <div
+                className={`file-info-card${dragActive ? ' drag-active' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <div className="file-info-left">
                   <div className="file-icon-box">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                   </div>
                   <div className="file-meta">
                     <strong className="file-name">{formState.file.name}</strong>
-                    <span className="file-size">{formatFileSize(formState.file.size)} · Ready to convert</span>
+                    <span className="file-size">
+                      {dragActive
+                        ? 'Drop to replace this file'
+                        : `${formatFileSize(formState.file.size)} · Ready to convert`}
+                    </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="file-remove-btn"
-                  onClick={handleRemoveFile}
-                  title="Remove file"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  <span>Remove</span>
-                </button>
+                <div className="file-card-actions">
+                  <button
+                    type="button"
+                    className="file-remove-btn file-replace-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Choose a different file"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    <span>Replace</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="file-remove-btn"
+                    onClick={handleRemoveFile}
+                    title="Remove file"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <span>Remove</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -357,7 +385,7 @@ export function DocxPlayground() {
               className="filename-input"
               value={outputFilename}
               onChange={(e) => setOutputFilename(e.target.value)}
-              placeholder={getDefaultFilename()}
+              placeholder={getDefaultFilename(formState.file)}
             />
           </div>
 

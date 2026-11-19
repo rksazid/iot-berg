@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { marked } from 'marked'
+import { useMemo, useState } from 'react'
 import { endpointOptions } from '../../config/pdfService'
 import { generatePdf } from '../../lib/pdfClient'
-import { ResizableSplit } from '../ui/ResizableSplit'
-import { CodeEditor } from '../ui/CodeEditor'
-import { EditorToolbar } from '../ui/EditorToolbar'
+import { markdownPreviewShell, renderMarkdown } from '../../lib/markdownPreview'
+import { EditorWorkspace } from './EditorWorkspace'
 import { starterMarkdown } from '../../data/mdExamples'
 import {
   footerTemplateExample,
@@ -13,6 +10,7 @@ import {
 } from '../../data/pdfExamples'
 
 const formats = ['A4', 'Letter', 'A3', 'Legal', 'Tabloid']
+const FORM_ID = 'markdown-to-pdf-form'
 
 const initialState = {
   endpointMode: 'auto',
@@ -76,8 +74,6 @@ function startDownload(blob, filename) {
 export function MdPlayground() {
   const [formState, setFormState] = useState(initialState)
   const [outputFilename, setOutputFilename] = useState('')
-  const [showPreview, setShowPreview] = useState(true)
-  const [fullscreen, setFullscreen] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [status, setStatus] = useState({
     loading: false,
@@ -87,27 +83,7 @@ export function MdPlayground() {
     usedEndpoint: '',
   })
 
-  const editorRef = useRef(null)
-  const fsEditorRef = useRef(null)
-
-  const renderedHtml = useMemo(() => marked.parse(formState.markdown), [formState.markdown])
-
-  const closeFullscreen = useCallback((e) => {
-    if (e.key === 'Escape') setFullscreen(false)
-  }, [])
-
-  useEffect(() => {
-    if (fullscreen) {
-      document.addEventListener('keydown', closeFullscreen)
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.removeEventListener('keydown', closeFullscreen)
-      document.body.style.overflow = ''
-    }
-  }, [fullscreen, closeFullscreen])
+  const renderedHtml = useMemo(() => renderMarkdown(formState.markdown), [formState.markdown])
 
   function updateField(field, value) {
     setFormState((current) => ({ ...current, [field]: value }))
@@ -153,104 +129,36 @@ export function MdPlayground() {
     setStatus({ loading: false, error: '', success: '', generationTime: '', usedEndpoint: '' })
   }
 
-  const editorPane = (ref, isFullscreen = false) => (
-    <div className="editor-pane">
-      <EditorToolbar editorRef={ref} language="markdown" />
-      <CodeEditor
-        ref={ref}
-        value={formState.markdown}
-        onChange={(v) => updateField('markdown', v)}
-        language="markdown"
-        height={isFullscreen ? 'calc(100vh - 52px)' : '460px'}
-      />
-    </div>
-  )
-
-  const previewPane = (
-    <div className="preview-pane-wrap">
-      <div className="preview-pane-bar">
-        <span className="preview-badge">Rendered HTML Output</span>
-        <span className="preview-sub">GFM Compliance</span>
-      </div>
-      <div
-        className="md-preview-panel"
-        dangerouslySetInnerHTML={{ __html: renderedHtml }}
-      />
-    </div>
-  )
-
   return (
     <section className="playground-panel">
-      <form className="pdf-form" onSubmit={handleSubmit}>
-        {/* Editor & Preview Header Section */}
-        <div className="form-section">
-          <div className="section-head section-head-row">
-            <div>
-              <h3>Markdown Document & Live Parsing</h3>
-              <p>Supports GitHub Flavored Markdown (GFM), syntax highlighting, tables, and task lists.</p>
-            </div>
-
-            <div className="header-controls-row">
-              <label className="field-inline-select">
-                <span>Endpoint:</span>
-                <select value={formState.endpointMode} onChange={(e) => updateField('endpointMode', e.target.value)}>
-                  {endpointOptions.map((o) => (
-                    <option key={o.key} value={o.key}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="field-header-actions">
-                <button
-                  type="button"
-                  className={`preview-toggle-btn${showPreview ? ' active' : ''}`}
-                  onClick={() => setShowPreview((v) => !v)}
-                  title="Toggle side-by-side preview"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <span>{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
-                </button>
-                {showPreview && (
-                  <button
-                    type="button"
-                    className="preview-toggle-btn"
-                    onClick={() => setFullscreen(true)}
-                    title="Open Fullscreen Studio"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                    <span>Fullscreen</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="editor-container">
-            <div className={`input-split${showPreview ? '' : ' preview-hidden'}`}>
-              {editorPane(editorRef, false)}
-              {showPreview && previewPane}
-            </div>
-          </div>
-        </div>
-
-        {fullscreen && showPreview && createPortal(
-          <div className="fullscreen-overlay">
-            <div className="fullscreen-header">
-              <div className="fs-title-wrap">
-                <span className="brand-dot" />
-                <span>IoT-Berg Markdown Studio - Fullscreen Workspace</span>
-              </div>
-              <button type="button" className="button button-secondary" onClick={() => setFullscreen(false)}>
-                Exit Fullscreen (Esc)
-              </button>
-            </div>
-            <ResizableSplit
-              left={editorPane(fsEditorRef, true)}
-              right={previewPane}
-            />
-          </div>,
-          document.body,
-        )}
+      <form className="pdf-form" id={FORM_ID} onSubmit={handleSubmit}>
+        <EditorWorkspace
+          title="Markdown Document & Live Parsing"
+          description="Supports GitHub Flavored Markdown (GFM), syntax highlighting, tables, and task lists."
+          language="markdown"
+          value={formState.markdown}
+          onChange={(markdown) => updateField('markdown', markdown)}
+          preview={{
+            label: 'Rendered HTML Output',
+            note: 'GFM Compliance',
+            frame: { shell: markdownPreviewShell, bodyHtml: renderedHtml },
+          }}
+          syncScroll
+          fileAccept=".md,.markdown,.txt"
+          fullscreenTitle="IoT-Berg Markdown Studio"
+          formId={FORM_ID}
+          status={status}
+          controls={
+            <label className="field-inline-select">
+              <span>Endpoint:</span>
+              <select value={formState.endpointMode} onChange={(e) => updateField('endpointMode', e.target.value)}>
+                {endpointOptions.map((o) => (
+                  <option key={o.key} value={o.key}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+          }
+        />
 
         {/* PDF Page Options Section */}
         <div className="form-section">

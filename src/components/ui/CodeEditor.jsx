@@ -1,9 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
-function buildTheme(EditorView, height) {
+// The editor takes its height from its container (.code-editor-wrap), so the
+// same component fills a fixed-height pane and a fullscreen one alike.
+function buildTheme(EditorView) {
   return EditorView.theme({
     '&': {
-      height,
       fontSize: '13.5px',
       fontFamily: '"Fira Code", "Cascadia Code", "JetBrains Mono", Menlo, monospace',
     },
@@ -148,15 +149,17 @@ async function loadModules(language) {
 }
 
 export const CodeEditor = forwardRef(function CodeEditor(
-  { value, onChange, language = 'html', height = '420px' },
+  { value, onChange, onScroll, language = 'html' },
   ref,
 ) {
   const containerRef = useRef(null)
   const viewRef = useRef(null)
   const onChangeRef = useRef(onChange)
+  const onScrollRef = useRef(onScroll)
 
   useEffect(() => {
     onChangeRef.current = onChange
+    onScrollRef.current = onScroll
   })
 
   useEffect(() => {
@@ -178,7 +181,7 @@ export const CodeEditor = forwardRef(function CodeEditor(
         indentOnInput(),
         bracketMatching(),
         highlightActiveLine(),
-        buildTheme(EditorView, height),
+        buildTheme(EditorView),
         highlight,
         langExtension,
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
@@ -191,6 +194,17 @@ export const CodeEditor = forwardRef(function CodeEditor(
       const state = EditorState.create({ doc: value ?? '', extensions })
       const view = new EditorView({ state, parent: containerRef.current })
       viewRef.current = view
+
+      // Report how far down the document is scrolled (0 to 1), for scroll sync.
+      const scroller = view.scrollDOM
+      scroller.addEventListener(
+        'scroll',
+        () => {
+          const range = scroller.scrollHeight - scroller.clientHeight
+          onScrollRef.current?.(range > 0 ? scroller.scrollTop / range : 0)
+        },
+        { passive: true },
+      )
     }
 
     init().catch(console.error)
@@ -203,7 +217,7 @@ export const CodeEditor = forwardRef(function CodeEditor(
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, height])
+  }, [language])
 
   useEffect(() => {
     const view = viewRef.current
